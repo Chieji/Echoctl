@@ -18,7 +18,9 @@ class EditorScreen : Screen {
             OutlinedTextField(
                 value = code,
                 onValueChange = { code = it },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 maxLines = Int.MAX_VALUE
             )
         }
