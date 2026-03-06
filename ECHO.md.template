@@ -1,0 +1,43 @@
+# ECHO.md - Project Context Template
+
+This file defines project-specific context for Echo CLI.
+When Echo runs in a directory containing this file, it will use these settings.
+
+## Project Name
+My Awesome Project
+
+## Description
+A brief description of what this project does.
+
+## Tech Stack
+- TypeScript
+- Node.js
+- React
+- PostgreSQL
+- Docker
+
+## Project Rules
+- Always use TypeScript for new files
+- Write tests for all new functions
+- Use conventional commits
+- No console.log in production code
+- Use async/await instead of promises
+
+## Coding Standards
+- Use 2 spaces for indentation
+- Max line length: 100 characters
+- Use single quotes for strings
+- Semicolons required
+- Trailing commas in multi-line objects
+
+## Custom Instructions
+When helping with this project:
+1. First understand the existing code structure
+2. Suggest minimal changes that fit the existing patterns
+3. Always consider security implications
+4. Prefer readability over cleverness
+
+## Environment
+- Node version: 20+
+- Package manager: npm
+- Database: PostgreSQL 15
