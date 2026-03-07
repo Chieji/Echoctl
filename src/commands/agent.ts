@@ -222,3 +222,57 @@ export async function agentLogs(options: {
   const paths = stateManager.getPaths();
   console.log(chalk.dim(`Ledger: ${paths.ledger}\n`));
 }
+
+/**
+ * Configure agent settings
+ */
+export async function agentConfig(options: {
+  plan?: boolean;
+  noPlan?: boolean;
+  autoAccept?: boolean;
+  noAutoAccept?: boolean;
+  status?: boolean;
+}): Promise<void> {
+  const stateManager = getStateManager();
+  await stateManager.init();
+  const state = stateManager.getState();
+  
+  console.log(chalk.bold('\n⚙️  Agent Configuration\n'));
+  
+  // Handle toggles
+  if (options.plan) {
+    await stateManager.setPlanMode(true);
+    console.log(chalk.green('✓') + ' Plan mode ENABLED - Agent will show plans before executing\n');
+  }
+  
+  if (options.noPlan) {
+    await stateManager.setPlanMode(false);
+    console.log(chalk.green('✓') + ' Plan mode DISABLED - Agent will execute immediately\n');
+  }
+  
+  if (options.autoAccept) {
+    await stateManager.setAutoAccept(true);
+    console.log(chalk.green('✓') + ' Auto-accept ENABLED - No confirmation prompts\n');
+  }
+  
+  if (options.noAutoAccept) {
+    await stateManager.setAutoAccept(false);
+    console.log(chalk.green('✓') + ' Auto-accept DISABLED - Confirmations required\n');
+  }
+  
+  // Show current config
+  const newState = stateManager.getState();
+  console.log(chalk.bold('Current Settings:'));
+  console.log(`  Plan Mode:      ${newState.planMode ? chalk.green('ON') : chalk.dim('OFF')}`);
+  console.log(`  Auto-Accept:    ${newState.autoAccept ? chalk.green('ON') : chalk.dim('OFF')}`);
+  console.log(`  YOLO Mode:      ${newState.yoloMode ? chalk.yellow('ON') : chalk.dim('OFF')}`);
+  console.log(`  Provider:       ${newState.provider}`);
+  console.log(`  Status:         ${chalk.cyan(newState.status)}`);
+  console.log('');
+  
+  console.log(chalk.dim('Usage:'));
+  console.log(chalk.dim('  echo agent config --plan        # Enable plan mode'));
+  console.log(chalk.dim('  echo agent config --auto-accept # Enable auto-accept'));
+  console.log(chalk.dim('  echo agent config --status      # Show current config'));
+  console.log('');
+}

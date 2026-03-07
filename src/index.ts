@@ -11,7 +11,7 @@ import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
 import { clearCommand } from './commands/clear.js';
-import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs } from './commands/agent.js';
+import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
 import { getConfig } from './utils/config.js';
@@ -194,6 +194,23 @@ function createCLI(): Command {
     .action(async (options: { limit?: number; type?: string }) => {
       try {
         await agentLogs(options);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('config')
+    .description('Configure agent settings (plan mode, auto-accept)')
+    .option('--plan', 'Enable plan mode (show plans before executing)')
+    .option('--no-plan', 'Disable plan mode')
+    .option('--auto-accept', 'Enable auto-accept (no confirmations)')
+    .option('--no-auto-accept', 'Disable auto-accept')
+    .option('--status', 'Show current configuration')
+    .action(async (options: { plan?: boolean; noPlan?: boolean; autoAccept?: boolean; noAutoAccept?: boolean; status?: boolean }) => {
+      try {
+        await agentConfig(options);
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
         process.exit(1);

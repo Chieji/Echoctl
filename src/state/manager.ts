@@ -18,6 +18,8 @@ export interface AgentState {
   failedTasks: number;
   provider: string;
   yoloMode: boolean;
+  planMode: boolean;        // NEW: Plan before executing
+  autoAccept: boolean;      // NEW: Auto-accept edits/commands
 }
 
 export interface StateEvent {
@@ -66,6 +68,8 @@ export class StateManager {
       failedTasks: 0,
       provider: this.config.defaultProvider,
       yoloMode: false,
+      planMode: false,      // Default: Execute immediately
+      autoAccept: false,    // Default: Ask for confirmation
     };
   }
 
@@ -265,6 +269,50 @@ export class StateManager {
     }
 
     return health;
+  }
+
+  /**
+   * Toggle plan mode
+   */
+  async togglePlanMode(): Promise<boolean> {
+    this.state.planMode = !this.state.planMode;
+    await this.saveState();
+    await this.logEvent({
+      timestamp: Date.now(),
+      type: 'health_check',
+      data: { action: 'toggle_plan_mode', enabled: this.state.planMode },
+    });
+    return this.state.planMode;
+  }
+
+  /**
+   * Toggle auto-accept
+   */
+  async toggleAutoAccept(): Promise<boolean> {
+    this.state.autoAccept = !this.state.autoAccept;
+    await this.saveState();
+    await this.logEvent({
+      timestamp: Date.now(),
+      type: 'health_check',
+      data: { action: 'toggle_auto_accept', enabled: this.state.autoAccept },
+    });
+    return this.state.autoAccept;
+  }
+
+  /**
+   * Set plan mode
+   */
+  async setPlanMode(enabled: boolean): Promise<void> {
+    this.state.planMode = enabled;
+    await this.saveState();
+  }
+
+  /**
+   * Set auto-accept
+   */
+  async setAutoAccept(enabled: boolean): Promise<void> {
+    this.state.autoAccept = enabled;
+    await this.saveState();
   }
 }
 
