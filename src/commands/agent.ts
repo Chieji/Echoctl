@@ -276,3 +276,91 @@ export async function agentConfig(options: {
   console.log(chalk.dim('  echo agent config --status      # Show current config'));
   console.log('');
 }
+
+/**
+ * Doctor command - diagnose all systems
+ */
+export async function agentDoctor(): Promise<void> {
+  const config = getConfig();
+  const memory = getMemory();
+  const stateManager = getStateManager();
+  
+  await memory.init();
+  await stateManager.init();
+  
+  console.log(chalk.bold('\n👨\u200d⚕️  Echo Doctor - System Diagnostic\n'));
+  
+  let allHealthy = true;
+  
+  // Check configuration
+  console.log(chalk.bold('Configuration:'));
+  const configPath = config.configPath;
+  console.log(`  ${existsSync(configPath) ? chalk.green('✓') : chalk.red('✗')} Config file exists`);
+  console.log(`  ${config.getDefaultProvider() ? chalk.green('✓') : chalk.red('✗')} Default provider set`);
+  console.log('');
+  
+  // Check providers
+  console.log(chalk.bold('Provider Status:'));
+  const providers = [
+    { name: 'Gemini', key: 'gemini', env: 'GEMINI_API_KEY' },
+    { name: 'OpenAI', key: 'openai', env: 'OPENAI_API_KEY' },
+    { name: 'Anthropic', key: 'anthropic', env: 'ANTHROPIC_API_KEY' },
+    { name: 'Groq', key: 'groq', env: 'GROQ_API_KEY' },
+    { name: 'Qwen', key: 'qwen', env: null },
+  ];
+  
+  for (const provider of providers) {
+    const hasKey = config.isProviderConfigured(provider.key as any) || process.env[provider.env!];
+    const icon = hasKey ? chalk.green('✓') : chalk.yellow('○');
+    const status = hasKey ? 'Configured' : `Set ${provider.env} or run: echo auth login`;
+    console.log(`  ${icon} ${provider.name}: ${status}`);
+  }
+  console.log('');
+  
+  // Check memory
+  console.log(chalk.bold('Memory System:'));
+  const memoryPath = memory.getHistoryPath();
+  console.log(`  ${existsSync(memoryPath) ? chalk.green('✓') : chalk.yellow('○')} History file`);
+  const stats = await memory.getStats();
+  console.log(`  ${stats.totalSessions >= 0 ? chalk.green('✓') : chalk.red('✗')} Sessions: ${stats.totalSessions}`);
+  console.log(`  ${stats.totalMessages >= 0 ? chalk.green('✓') : chalk.red('✗')} Messages: ${stats.totalMessages}`);
+  console.log('');
+  
+  // Check state
+  console.log(chalk.bold('State System:'));
+  const paths = stateManager.getPaths();
+  console.log(`  ${existsSync(paths.state) ? chalk.green('✓') : chalk.yellow('○')} State file`);
+  console.log(`  ${existsSync(paths.ledger) ? chalk.green('✓') : chalk.yellow('○')} Event ledger`);
+  const state = stateManager.getState();
+  console.log(`  ${chalk.cyan('Status')}: ${state.status}`);
+  console.log(`  ${chalk.cyan('Tasks')}: ${state.totalTasks} total, ${state.completedTasks} completed, ${state.failedTasks} failed`);
+  console.log('');
+  
+  // Check directories
+  console.log(chalk.bold('Directories:'));
+  const dirs = [paths.data, paths.docs, paths.logs];
+  for (const dir of dirs) {
+    console.log(`  ${existsSync(dir) ? chalk.green('✓') : chalk.red('✗')} ${dir}`);
+  }
+  console.log('');
+  
+  // Overall health
+  const health = await stateManager.getHealth();
+  console.log(chalk.bold('Overall Health:'));
+  console.log(`  ${health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok' ? chalk.green('✓ All systems operational') : chalk.red('✗ Issues detected')}`);
+  console.log('');
+  
+  if (!allHealthy) {
+    console.log(chalk.yellow('Recommendation: Run ') + chalk.cyan('echo auth login') + chalk.yellow(' to configure providers\n'));
+  }
+}
+
+// Helper function
+function existsSync(path: string): boolean {
+  try {
+    const { existsSync: es } = require('fs');
+    return es(path);
+  } catch {
+    return false;
+  }
+}

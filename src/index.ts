@@ -11,7 +11,7 @@ import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
 import { clearCommand } from './commands/clear.js';
-import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig } from './commands/agent.js';
+import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig, agentDoctor } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
 import { getConfig } from './utils/config.js';
@@ -211,6 +211,18 @@ function createCLI(): Command {
     .action(async (options: { plan?: boolean; noPlan?: boolean; autoAccept?: boolean; noAutoAccept?: boolean; status?: boolean }) => {
       try {
         await agentConfig(options);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('doctor')
+    .description('Diagnose all systems (config, providers, memory, state)')
+    .action(async () => {
+      try {
+        await agentDoctor();
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
         process.exit(1);

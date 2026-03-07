@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
+    "echoctl": "./dist/index.js",
     "echo": "./dist/index.js"
   },
   "scripts": {

@@ -5,11 +5,24 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, ToolName, webTools, gitTools, multiFileTools, lspTools, browserTools } from '../tools/executor.js';
+import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
+
+// Build unified tool registry
+const toolRegistry = {
+  ...tools,
+  ...webTools,
+  ...gitTools,
+  ...multiFileTools,
+  ...lspTools,
+  ...browserTools,
+};
+
+// Get all tool names for system prompt
+const availableTools = Object.keys(toolRegistry);
 
 export interface EngineConfig {
   yoloMode: boolean;
@@ -71,9 +84,14 @@ Available tools:
 - browserGetLinks: Get all links from the page
 - browserSearchGoogle: Search Google for a query
 
-When you want to use a tool, respond with:
+When you want to use a tool, respond with EXACTLY this format:
 [TOOL: tool_name]
 {"param1": "value1", "param2": "value2"}
+
+IMPORTANT: 
+- Use exact tool names from the list above
+- Parameters must be valid JSON
+- Do not add any text between [TOOL: ...] and the JSON
 
 For simple chat responses, just respond normally.
 
@@ -140,12 +158,18 @@ export class ReActEngine {
       ? `${REACT_SYSTEM_PROMPT}\n\n${formatContextForPrompt(echoContext)}`
       : REACT_SYSTEM_PROMPT;
 
-    // Add user message
+    // Add user message and prune if needed
     this.state.messages.push({
       role: 'user',
       content: task,
       timestamp: Date.now(),
     });
+    
+    // Prune messages to prevent unbounded growth (keep last 20)
+    const MAX_MESSAGES = 20;
+    if (this.state.messages.length > MAX_MESSAGES) {
+      this.state.messages = this.state.messages.slice(-MAX_MESSAGES);
+    }
 
     try {
       while (this.state.iteration < this.config.maxIterations) {
@@ -229,7 +253,7 @@ export class ReActEngine {
    * Execute a tool with optional confirmation
    */
   private async executeTool(
-    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews' | 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog' | 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree' | 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage' | 'navigate' | 'screenshot' | 'click' | 'type' | 'extract' | 'getLinks' | 'searchGoogle',
+    tool: string,
     params: any,
     provider: ProviderName
   ): Promise<{ success: boolean; output: string } | null> {
@@ -259,12 +283,12 @@ export class ReActEngine {
       }
     }
 
-    // Execute the tool
-    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'] || gitTools[tool as 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog'] || multiFileTools[tool as 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree'] || lspTools[tool as 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage'] || browserTools[tool as 'navigate' | 'screenshot' | 'click' | 'type' | 'extract' | 'getLinks' | 'searchGoogle'];
+    // Execute the tool using unified registry
+    const toolFn = toolRegistry[tool as keyof typeof toolRegistry];
     if (!toolFn) {
       return {
         success: false,
-        output: `Unknown tool: ${tool}`,
+        output: `Unknown tool: ${tool}. Available: ${availableTools.join(', ')}`,
       };
     }
 
