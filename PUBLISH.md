@@ -18,7 +18,7 @@ git remote set-url origin https://github.com/chieji/echoctl.git
 git push -u origin main
 
 # When prompted, enter your GitHub credentials
-# Username: chieji
+# Username: 
 # Password: Your GitHub Personal Access Token
 ```
 
