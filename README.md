@@ -106,13 +106,37 @@ echo chat "Explain closures" --provider openai
 
 ### 3. Agent Mode (ReAct)
 
+Echo can autonomously complete tasks using tools:
+
 ```bash
 # Agent mode - Echo will execute tools to complete tasks
 echo chat "Count the lines of code in all .ts files" --agent
 
+# Git operations
+echo chat "Check git status and commit changes" --agent
+echo chat "Push to main branch" --agent
+
+# Multi-file operations
+echo chat "Rename all getUser() to fetchUser() in the project" --agent
+echo chat "Find all references to UserService" --agent
+
+# Web search (no API key needed!)
+echo chat "Search for latest TypeScript news" --agent
+echo chat "Scrape the pricing from https://example.com/pricing" --agent
+echo chat "Get latest tech news" --agent
+
 # YOLO mode - No confirmation prompts
 echo chat "Create a new file called test.js with console.log('hello')" --agent --yolo
 ```
+
+**Available Tools:**
+- 🛠️ **Shell**: `run_command` - Execute any shell command
+- 📁 **Files**: `readFile`, `writeFile`, `listFiles`, `deleteFile`
+- 💻 **Code**: `executePython`, `executeNode`
+- 🔍 **Web**: `searchWeb`, `scrapeUrl`, `getNews`
+- 📦 **Git**: `getGitStatus`, `gitAdd`, `gitCommit`, `gitPush`, `gitLog`
+- 📝 **Multi-File**: `findAndReplace`, `searchInFiles`, `createFiles`
+- 🔬 **LSP**: `findSymbolReferences`, `renameSymbol`, `findSymbolDefinition`
 
 ## Commands
 

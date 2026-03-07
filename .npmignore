@@ -1,0 +1,49 @@
+# Source files
+src/
+tests/
+*.ts
+*.tsx
+!dist/
+
+# Development
+.git/
+.github/
+.gitignore
+.npmrc
+
+# Documentation
+*.md
+!README.md
+!LICENSE
+
+# Build artifacts
+node_modules/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config files not needed in package
+tsconfig.json
+build.sh
+echoctl.sh
+
+# Python files (from earlier echoctl version)
+echoctl/
+*.py
+pyproject.toml
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/

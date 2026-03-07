@@ -245,9 +245,40 @@ export * from './multi-file.js';
 
 // Add web tools to the tools object for ReAct engine
 import { searchWeb, scrapeUrl, getNews } from './web.js';
+import { getGitStatus, gitAdd, gitAddAll, gitCommit, gitPush, gitLog } from './git.js';
+import { findAndReplace, searchInFiles, createFiles, updateFiles, deleteFiles, findFiles, getFileTree } from './multi-file.js';
 
 export const webTools = {
   searchWeb,
   scrapeUrl,
   getNews,
+};
+
+export const gitTools = {
+  getGitStatus,
+  gitAdd,
+  gitAddAll,
+  gitCommit,
+  gitPush,
+  gitLog,
+};
+
+export const multiFileTools = {
+  findAndReplace,
+  searchInFiles,
+  createFiles,
+  updateFiles,
+  deleteFiles,
+  findFiles,
+  getFileTree,
+};
+
+// Add LSP tools for code intelligence
+import { findSymbolReferences, renameSymbol, findSymbolDefinition, detectProjectLanguage } from '../lsp/integration.js';
+
+export const lspTools = {
+  findSymbolReferences,
+  renameSymbol,
+  findSymbolDefinition,
+  detectProjectLanguage,
 };

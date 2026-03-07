@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, ToolName, webTools } from '../tools/executor.js';
+import { tools, ToolName, webTools, gitTools, multiFileTools, lspTools } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -46,6 +46,23 @@ Available tools:
 - searchWeb: Search the web using DuckDuckGo (no API key needed)
 - scrapeUrl: Scrape content from a URL
 - getNews: Get latest news headlines
+- getGitStatus: Get git repository status
+- gitAdd: Stage files for commit
+- gitAddAll: Stage all changes
+- gitCommit: Commit staged changes
+- gitPush: Push to remote repository
+- gitLog: View commit history
+- findAndReplace: Find and replace text across multiple files
+- searchInFiles: Search for pattern in multiple files
+- createFiles: Create multiple files at once
+- updateFiles: Update multiple files
+- deleteFiles: Delete multiple files
+- findFiles: Find files by pattern
+- getFileTree: Get directory tree structure
+- findSymbolReferences: Find all references to a code symbol
+- renameSymbol: Rename a symbol across the codebase
+- findSymbolDefinition: Find where a symbol is defined
+- detectProjectLanguage: Detect the programming language of a project
 
 When you want to use a tool, respond with:
 [TOOL: tool_name]
@@ -205,7 +222,7 @@ export class ReActEngine {
    * Execute a tool with optional confirmation
    */
   private async executeTool(
-    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews',
+    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews' | 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog' | 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree' | 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage',
     params: any,
     provider: ProviderName
   ): Promise<{ success: boolean; output: string } | null> {
@@ -236,7 +253,7 @@ export class ReActEngine {
     }
 
     // Execute the tool
-    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'];
+    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'] || gitTools[tool as 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog'] || multiFileTools[tool as 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree'] || lspTools[tool as 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage'];
     if (!toolFn) {
       return {
         success: false,
@@ -264,6 +281,69 @@ export class ReActEngine {
           success: true, 
           output: `Title: ${scraped.title}\n\n${scraped.content.substring(0, 2000)}${scraped.content.length > 2000 ? '...' : ''}` 
         };
+      }
+      
+      // Format git results
+      if (tool === 'getGitStatus') {
+        const status = result as any;
+        return {
+          success: true,
+          output: `Branch: ${status.branch}\nAhead: ${status.ahead}, Behind: ${status.behind}\nChanged: ${status.changed.join(', ') || 'none'}\nStaged: ${status.staged.join(', ') || 'none'}\nUntracked: ${status.untracked.join(', ') || 'none'}`
+        };
+      }
+      
+      if (tool === 'gitLog') {
+        const logs = result as any[];
+        return {
+          success: true,
+          output: logs.map((l: any, i: number) => `${i + 1}. ${l.hash.substring(0, 8)} - ${l.message} (${l.author}, ${l.date})`).join('\n')
+        };
+      }
+      
+      // Format multi-file results
+      if (tool === 'findAndReplace' || tool === 'createFiles' || tool === 'updateFiles' || tool === 'deleteFiles') {
+        const resultData = result as any;
+        return {
+          success: resultData.success,
+          output: `Edited: ${resultData.edited?.join(', ') || 'none'}\nCreated: ${resultData.created?.join(', ') || 'none'}\nDeleted: ${resultData.deleted?.join(', ') || 'none'}\nFailed: ${resultData.failed?.map((f: any) => f.path).join(', ') || 'none'}`
+        };
+      }
+      
+      if (tool === 'searchInFiles') {
+        const results = result as any[];
+        return {
+          success: true,
+          output: results.map((r: any) => `${r.path} (${r.matches} matches):\n${r.lines.map((l: any) => `  Line ${l.number}: ${l.content}`).join('\n')}`).join('\n\n')
+        };
+      }
+      
+      if (tool === 'getFileTree') {
+        return { success: true, output: result as string };
+      }
+      
+      // Format LSP results
+      if (tool === 'findSymbolReferences' || tool === 'findSymbolDefinition') {
+        const refs = result as any[];
+        return {
+          success: true,
+          output: refs.length > 0 
+            ? refs.map((r: any, i: number) => `${i + 1}. ${r.uri}:${r.range.start.line + 1}:${r.range.start.character + 1}`).join('\n')
+            : 'No references found'
+        };
+      }
+      
+      if (tool === 'renameSymbol') {
+        const renameResult = result as any;
+        return {
+          success: renameResult.success,
+          output: renameResult.success 
+            ? `Renamed symbol in ${renameResult.filesChanged} file(s)`
+            : `Failed: ${renameResult.error}`
+        };
+      }
+      
+      if (tool === 'detectProjectLanguage') {
+        return { success: true, output: `Detected language: ${result}` };
       }
       
       return result as { success: boolean; output: string };
