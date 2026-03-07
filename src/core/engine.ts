@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, ToolName } from '../tools/executor.js';
+import { tools, ToolName, webTools } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -43,6 +43,9 @@ Available tools:
 - deleteFile: Delete files/directories
 - executePython: Run Python code
 - executeNode: Run Node.js code
+- searchWeb: Search the web using DuckDuckGo (no API key needed)
+- scrapeUrl: Scrape content from a URL
+- getNews: Get latest news headlines
 
 When you want to use a tool, respond with:
 [TOOL: tool_name]
@@ -202,16 +205,16 @@ export class ReActEngine {
    * Execute a tool with optional confirmation
    */
   private async executeTool(
-    tool: ToolName,
+    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews',
     params: any,
     provider: ProviderName
   ): Promise<{ success: boolean; output: string } | null> {
     const dangerousTools = ['runCommand', 'deleteFile', 'executePython', 'executeNode'];
-    const needsConfirmation = dangerousTools.includes(tool) && !this.yoloMode;
+    const needsConfirmation = dangerousTools.includes(tool as string) && !this.yoloMode;
 
     if (needsConfirmation) {
       const command = params.command || params.filePath || params.code;
-      const preview = typeof command === 'string' 
+      const preview = typeof command === 'string'
         ? command.substring(0, 100) + (command.length > 100 ? '...' : '')
         : JSON.stringify(params);
 
@@ -233,7 +236,7 @@ export class ReActEngine {
     }
 
     // Execute the tool
-    const toolFn = tools[tool];
+    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'];
     if (!toolFn) {
       return {
         success: false,
@@ -243,8 +246,27 @@ export class ReActEngine {
 
     try {
       const paramValues = Object.values(params) as any[];
-      const result = await toolFn(...paramValues);
-      return result;
+      const result: any = await toolFn(...paramValues);
+      
+      // Format web search results for display
+      if (tool === 'searchWeb' || tool === 'getNews') {
+        const results = result as any[];
+        const formatted = results.map((r: any, i: number) => 
+          `${i + 1}. ${r.title}\n   URL: ${r.url}\n   ${r.snippet || ''}\n`
+        ).join('\n');
+        return { success: true, output: formatted };
+      }
+      
+      // Format scrape results
+      if (tool === 'scrapeUrl') {
+        const scraped = result as any;
+        return { 
+          success: true, 
+          output: `Title: ${scraped.title}\n\n${scraped.content.substring(0, 2000)}${scraped.content.length > 2000 ? '...' : ''}` 
+        };
+      }
+      
+      return result as { success: boolean; output: string };
     } catch (error: any) {
       return {
         success: false,

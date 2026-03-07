@@ -242,3 +242,12 @@ export type ToolName = keyof typeof tools;
 export * from './git.js';
 export * from './web.js';
 export * from './multi-file.js';
+
+// Add web tools to the tools object for ReAct engine
+import { searchWeb, scrapeUrl, getNews } from './web.js';
+
+export const webTools = {
+  searchWeb,
+  scrapeUrl,
+  getNews,
+};
