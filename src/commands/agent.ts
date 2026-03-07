@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import { getConfig } from '../utils/config.js';
 import { getMemory } from '../utils/memory.js';
 import { ProviderChain } from '../providers/chain.js';
+import { getStateManager } from '../state/manager.js';
 
 /**
  * Run agent mode with a task
@@ -31,13 +32,40 @@ export async function agentRun(task: string, options: {
 export async function agentHealth(): Promise<void> {
   const config = getConfig();
   const memory = getMemory();
+  const stateManager = getStateManager();
   
   await memory.init();
+  await stateManager.init();
   
   const providers = config.getConfiguredProviders();
   const stats = await memory.getStats();
+  const health = await stateManager.getHealth();
+  const state = stateManager.getState();
+  const paths = stateManager.getPaths();
   
   console.log(chalk.bold('\n🏥 Agent Health Status\n'));
+  
+  // System health
+  console.log(chalk.bold('System Health:'));
+  const healthIcon = health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok' 
+    ? chalk.green('✓') 
+    : chalk.red('✗');
+  console.log(`  ${healthIcon} Overall: ${health.message}`);
+  console.log(`  ${health.state === 'ok' ? chalk.green('✓') : chalk.red('✗')} State file: ${paths.state}`);
+  console.log(`  ${health.ledger === 'ok' ? chalk.green('✓') : chalk.red('✗')} Event ledger: ${paths.ledger}`);
+  console.log(`  ${health.directories === 'ok' ? chalk.green('✓') : chalk.red('✗')} Directories`);
+  console.log('');
+  
+  // Agent state
+  console.log(chalk.bold('Agent State:'));
+  console.log(`  Status: ${chalk.cyan(state.status)}`);
+  console.log(`  Current Task: ${state.currentTask || 'None'}`);
+  console.log(`  Total Tasks: ${state.totalTasks}`);
+  console.log(`  Completed: ${chalk.green(state.completedTasks)}`);
+  console.log(`  Failed: ${chalk.red(state.failedTasks)}`);
+  console.log(`  Provider: ${state.provider}`);
+  console.log(`  YOLO Mode: ${state.yoloMode ? chalk.yellow('ON') : chalk.dim('OFF')}`);
+  console.log('');
   
   // Provider health
   console.log(chalk.bold('Providers:'));
@@ -59,7 +87,7 @@ export async function agentHealth(): Promise<void> {
   console.log(`  Storage: ~/.config/echo-cli/history.json`);
   console.log('');
   
-  // System health
+  // System info
   console.log(chalk.bold('System:'));
   console.log(`  Node: ${process.version}`);
   console.log(`  Platform: ${process.platform}`);
@@ -67,8 +95,8 @@ export async function agentHealth(): Promise<void> {
   console.log('');
   
   // Overall status
-  const health = providers.length > 0 && stats.totalSessions >= 0;
-  console.log(health ? chalk.green('✓ Agent Healthy') : chalk.red('✗ Agent Issues Detected'));
+  const isHealthy = health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok';
+  console.log(isHealthy ? chalk.green('✓ Agent Healthy') : chalk.red('✗ Agent Issues Detected'));
   console.log('');
 }
 
@@ -147,4 +175,50 @@ export async function agentPlan(): Promise<void> {
   console.log(chalk.bold('\n📋 Agent Plan\n'));
   console.log(chalk.yellow('⚠️  Agent planning is handled by ReAct engine during execution\n'));
   console.log(chalk.dim('Use: ') + chalk.cyan('echo chat "your task" --agent') + chalk.dim(' to start agent mode\n'));
+}
+
+/**
+ * Show agent logs/events
+ */
+export async function agentLogs(options: {
+  limit?: number;
+  type?: string;
+  follow?: boolean;
+}): Promise<void> {
+  const stateManager = getStateManager();
+  await stateManager.init();
+  
+  console.log(chalk.bold('\n📜 Agent Event Logs\n'));
+  
+  const events = await stateManager.getRecentEvents(options.limit || 20);
+  
+  if (events.length === 0) {
+    console.log(chalk.dim('No events logged yet\n'));
+    return;
+  }
+  
+  for (const event of events) {
+    const icon = {
+      task_start: '🚀',
+      task_complete: '✅',
+      task_error: '❌',
+      tool_call: '🔧',
+      provider_switch: '🔄',
+      health_check: '🏥',
+    }[event.type] || '•';
+    
+    const time = new Date(event.timestamp).toLocaleTimeString();
+    console.log(`${icon} [${time}] ${event.type}`);
+    
+    if (event.data?.task) {
+      console.log(chalk.dim(`   Task: ${event.data.task}`));
+    }
+    if (event.data?.tool) {
+      console.log(chalk.dim(`   Tool: ${event.data.tool}`));
+    }
+    console.log('');
+  }
+  
+  const paths = stateManager.getPaths();
+  console.log(chalk.dim(`Ledger: ${paths.ledger}\n`));
 }

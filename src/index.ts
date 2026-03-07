@@ -11,7 +11,7 @@ import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
 import { clearCommand } from './commands/clear.js';
-import { agentRun, agentHealth, agentTools, agentMemory, agentPlan } from './commands/agent.js';
+import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
 import { getConfig } from './utils/config.js';
@@ -180,6 +180,20 @@ function createCLI(): Command {
     .action(async () => {
       try {
         await agentPlan();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('logs')
+    .description('Show agent event logs')
+    .option('-l, --limit <number>', 'Number of events to show')
+    .option('-t, --type <type>', 'Filter by event type')
+    .action(async (options: { limit?: number; type?: string }) => {
+      try {
+        await agentLogs(options);
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
         process.exit(1);
