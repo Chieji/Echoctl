@@ -146,6 +146,25 @@ echo chat "Create a new file called test.js with console.log('hello')" --agent -
 
 ## Commands
 
+### Agent Management
+
+```bash
+# Show agent health status
+echo agent health
+
+# List all available tools
+echo agent tools
+
+# Show agent memory and sessions
+echo agent memory
+
+# Run agent with a task
+echo agent run "my task"
+
+# Show current agent plan
+echo agent plan
+```
+
 ### Authentication
 
 ```bash
