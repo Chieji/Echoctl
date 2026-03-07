@@ -18,17 +18,22 @@ interface AuthAnswers {
  * Auto-sync credentials from existing CLI tools
  */
 export async function authAutoSync(): Promise<void> {
-  console.log(chalk.bold('\n🔄 Auto-Syncing Credentials...\n'));
+  console.log(chalk.bold('\n🔄 Auto-Syncing Credentials from CLI Tools...\n'));
   
   const creds = await AutoAuthSync.syncAllCredentials();
   const config = getConfig();
   let synced = 0;
+
+  console.log(chalk.bold('Detected Credentials:\n'));
 
   // Google Cloud -> Gemini
   if (creds.google) {
     config.setApiKey('gemini', creds.google);
     console.log(chalk.green('✓') + ' Google Cloud (Gemini) - Synced from gcloud');
     synced++;
+  } else {
+    console.log(chalk.dim('○') + ' Google Cloud (gcloud) - Not logged in');
+    console.log(chalk.dim('   Run: gcloud auth application-default login'));
   }
 
   // Aliyun -> Qwen
@@ -37,9 +42,14 @@ export async function authAutoSync(): Promise<void> {
     config.setProviderConfig('qwen', {
       apiKey: creds.qwen.accessKeyId,
       baseUrl: creds.qwen.accessKeySecret,
+      model: 'qwen-turbo',
     });
-    console.log(chalk.green('✓') + ' Aliyun (Qwen) - Synced from ~/.aliyun/config.json');
+    console.log(chalk.green('✓') + ' Qwen (Aliyun) - Synced from ~/.aliyun/config.json');
     synced++;
+  } else {
+    console.log(chalk.dim('○') + ' Qwen (Aliyun) - Not found');
+    console.log(chalk.dim('   Install: npm install -g aliyun-cli'));
+    console.log(chalk.dim('   Login:   aliyun configure'));
   }
 
   // Ollama
@@ -72,10 +82,11 @@ export async function authAutoSync(): Promise<void> {
   }
 
   if (synced === 0) {
-    console.log(chalk.yellow('⚠ No credentials found to sync.\n'));
+    console.log(chalk.yellow('\n⚠ No credentials found to sync.\n'));
     console.log(chalk.dim('Run ') + chalk.cyan('echo auth login') + chalk.dim(' to configure manually.\n'));
   } else {
-    console.log(chalk.green(`\n✓ Synced ${synced} provider(s)\n`));
+    console.log(chalk.green(`\n✅ Successfully synced ${synced} provider(s)\n`));
+    console.log(chalk.dim('Run ') + chalk.cyan('echo "Hello!"') + chalk.dim(' to start chatting\n'));
   }
 }
 
@@ -103,6 +114,9 @@ export async function authLogin(): Promise<void> {
       { name: 'gemini', message: 'Google Gemini (Recommended - Free tier available)' },
       { name: 'openai', message: 'OpenAI (GPT-4, GPT-4o)' },
       { name: 'anthropic', message: 'Anthropic (Claude 3.5 Sonnet)' },
+      { name: 'qwen', message: 'Alibaba Qwen (Aliyun - Free tier available)' },
+      { name: 'groq', message: 'Groq (Ultra-fast inference)' },
+      { name: 'ollama', message: 'Ollama (Local models - Free)' },
     ],
   }) as { provider: ProviderName };
 
@@ -182,20 +196,20 @@ export async function authStatus(): Promise<void> {
   }
 
   console.log(chalk.dim('Configured Providers:'));
-  
-  for (const provider of ['gemini', 'openai', 'anthropic'] as ProviderName[]) {
+
+  for (const provider of ['gemini', 'openai', 'anthropic', 'qwen', 'groq', 'ollama'] as ProviderName[]) {
     const isConfigured = config.isProviderConfigured(provider);
     const isDefault = provider === defaultProvider;
-    
-    const status = isConfigured 
-      ? chalk.green('✓') 
+
+    const status = isConfigured
+      ? chalk.green('✓')
       : chalk.dim('○');
-    
-    const defaultMark = isDefault && isConfigured 
-      ? chalk.cyan(' (default)') 
+
+    const defaultMark = isDefault && isConfigured
+      ? chalk.cyan(' (default)')
       : '';
-    
-    const keyPreview = isConfigured 
+
+    const keyPreview = isConfigured
       ? chalk.dim(`Key: ${config.getApiKey(provider)?.substring(0, 8)}...`)
       : chalk.dim('Not configured');
 

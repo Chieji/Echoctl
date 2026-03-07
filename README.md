@@ -76,12 +76,23 @@ echo "Hello, Echo!"
 ### 1. Authenticate
 
 ```bash
-# Interactive setup
+# Auto-detect existing credentials
+echo auth sync
+
+# Or interactive setup
 echo auth login
 
 # View status
 echo auth status
 ```
+
+**Supported Providers:**
+- 🟩 **Google Gemini** - Free tier (60 requests/min)
+- 🟦 **OpenAI** - GPT-4, GPT-4o
+- 🟪 **Anthropic Claude** - Claude 3.5 Sonnet
+- 🟥 **Alibaba Qwen** - Free tier via Aliyun
+- 🟢 **Groq** - Ultra-fast inference
+- 🟨 **Ollama** - Local models (free)
 
 ### 2. Standard Chat
 
