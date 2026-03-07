@@ -120,6 +120,11 @@ echo chat "Push to main branch" --agent
 echo chat "Rename all getUser() to fetchUser() in the project" --agent
 echo chat "Find all references to UserService" --agent
 
+# Browser automation
+echo chat "Navigate to example.com and take a screenshot" --agent
+echo chat "Search Google for TypeScript tutorials" --agent
+echo chat "Extract all links from https://example.com" --agent
+
 # Web search (no API key needed!)
 echo chat "Search for latest TypeScript news" --agent
 echo chat "Scrape the pricing from https://example.com/pricing" --agent
@@ -133,7 +138,8 @@ echo chat "Create a new file called test.js with console.log('hello')" --agent -
 - 🛠️ **Shell**: `run_command` - Execute any shell command
 - 📁 **Files**: `readFile`, `writeFile`, `listFiles`, `deleteFile`
 - 💻 **Code**: `executePython`, `executeNode`
-- 🔍 **Web**: `searchWeb`, `scrapeUrl`, `getNews`
+- 🌐 **Web**: `searchWeb`, `scrapeUrl`, `getNews`
+- 🌍 **Browser**: `browserNavigate`, `browserScreenshot`, `browserClick`, `browserType`, `browserExtract`
 - 📦 **Git**: `getGitStatus`, `gitAdd`, `gitCommit`, `gitPush`, `gitLog`
 - 📝 **Multi-File**: `findAndReplace`, `searchInFiles`, `createFiles`
 - 🔬 **LSP**: `findSymbolReferences`, `renameSymbol`, `findSymbolDefinition`

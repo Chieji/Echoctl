@@ -275,10 +275,21 @@ export const multiFileTools = {
 
 // Add LSP tools for code intelligence
 import { findSymbolReferences, renameSymbol, findSymbolDefinition, detectProjectLanguage } from '../lsp/integration.js';
+import { browserNavigate, browserScreenshot, browserClick, browserType, browserExtract, browserGetLinks, browserSearchGoogle } from './browser.js';
 
 export const lspTools = {
   findSymbolReferences,
   renameSymbol,
   findSymbolDefinition,
   detectProjectLanguage,
+};
+
+export const browserTools = {
+  navigate: browserNavigate,
+  screenshot: browserScreenshot,
+  click: browserClick,
+  type: browserType,
+  extract: browserExtract,
+  getLinks: browserGetLinks,
+  searchGoogle: browserSearchGoogle,
 };

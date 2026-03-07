@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, ToolName, webTools, gitTools, multiFileTools, lspTools } from '../tools/executor.js';
+import { tools, ToolName, webTools, gitTools, multiFileTools, lspTools, browserTools } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -63,6 +63,13 @@ Available tools:
 - renameSymbol: Rename a symbol across the codebase
 - findSymbolDefinition: Find where a symbol is defined
 - detectProjectLanguage: Detect the programming language of a project
+- browserNavigate: Navigate to a website URL
+- browserScreenshot: Take a screenshot of current page
+- browserClick: Click an element on the page
+- browserType: Type text into an input field
+- browserExtract: Extract text from the page
+- browserGetLinks: Get all links from the page
+- browserSearchGoogle: Search Google for a query
 
 When you want to use a tool, respond with:
 [TOOL: tool_name]
@@ -222,7 +229,7 @@ export class ReActEngine {
    * Execute a tool with optional confirmation
    */
   private async executeTool(
-    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews' | 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog' | 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree' | 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage',
+    tool: ToolName | 'searchWeb' | 'scrapeUrl' | 'getNews' | 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog' | 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree' | 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage' | 'navigate' | 'screenshot' | 'click' | 'type' | 'extract' | 'getLinks' | 'searchGoogle',
     params: any,
     provider: ProviderName
   ): Promise<{ success: boolean; output: string } | null> {
@@ -253,7 +260,7 @@ export class ReActEngine {
     }
 
     // Execute the tool
-    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'] || gitTools[tool as 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog'] || multiFileTools[tool as 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree'] || lspTools[tool as 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage'];
+    const toolFn = tools[tool as ToolName] || webTools[tool as 'searchWeb' | 'scrapeUrl' | 'getNews'] || gitTools[tool as 'getGitStatus' | 'gitAdd' | 'gitAddAll' | 'gitCommit' | 'gitPush' | 'gitLog'] || multiFileTools[tool as 'findAndReplace' | 'searchInFiles' | 'createFiles' | 'updateFiles' | 'deleteFiles' | 'findFiles' | 'getFileTree'] || lspTools[tool as 'findSymbolReferences' | 'renameSymbol' | 'findSymbolDefinition' | 'detectProjectLanguage'] || browserTools[tool as 'navigate' | 'screenshot' | 'click' | 'type' | 'extract' | 'getLinks' | 'searchGoogle'];
     if (!toolFn) {
       return {
         success: false,
@@ -344,6 +351,31 @@ export class ReActEngine {
       
       if (tool === 'detectProjectLanguage') {
         return { success: true, output: `Detected language: ${result}` };
+      }
+      
+      // Format browser results
+      if (tool === 'navigate' || tool === 'searchGoogle') {
+        const navResult = result as any;
+        return {
+          success: navResult.success,
+          output: navResult.success 
+            ? `Navigated to: ${navResult.url}\nTitle: ${navResult.title}`
+            : `Navigation failed: ${navResult.error}`
+        };
+      }
+      
+      if (tool === 'screenshot') {
+        const ssResult = result as any;
+        return {
+          success: ssResult.success,
+          output: ssResult.success
+            ? `Screenshot taken${ssResult.url ? ` and saved to ${ssResult.url}` : ''}`
+            : `Screenshot failed: ${ssResult.error}`
+        };
+      }
+      
+      if (tool === 'extract' || tool === 'getLinks') {
+        return { success: true, output: (result as any).content || result };
       }
       
       return result as { success: boolean; output: string };
