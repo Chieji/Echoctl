@@ -1,5 +1,5 @@
 {
-  "name": "echo-ai-cli",
+  "name": "@chieji/echo-ai-cli",
   "version": "1.0.0",
   "description": "Echo - The Resilient Agentic Terminal with multi-provider AI, auto-failover, and plugin sync",
   "type": "module",
@@ -7,6 +7,9 @@
   "bin": {
     "echoctl": "./dist/index.js",
     "echo": "./dist/index.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "build": "./build.sh",
