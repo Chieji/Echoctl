@@ -137,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Footer */}
       <Box>
-        <Text color="gray" dim>
+        <Text color="gray">
           Press 'q' to quit • Press Ctrl+C to force exit
         </Text>
       </Box>

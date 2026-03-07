@@ -187,7 +187,7 @@ export async function browserGetLinks(): Promise<BrowserResult> {
       return Array.from(document.querySelectorAll('a[href]'))
         .map(a => ({
           text: a.textContent?.trim() || '',
-          href: a.href,
+          href: (a as HTMLAnchorElement).href,
         }))
         .filter(link => link.href.startsWith('http'));
     });

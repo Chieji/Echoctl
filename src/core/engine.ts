@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools } from '../tools/executor.js';
+import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, ToolName } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -294,7 +294,7 @@ export class ReActEngine {
 
     try {
       const paramValues = Object.values(params) as any[];
-      const result: any = await toolFn(...paramValues);
+      const result: any = await (toolFn as any)(...paramValues);
       
       // Format web search results for display
       if (tool === 'searchWeb' || tool === 'getNews') {
