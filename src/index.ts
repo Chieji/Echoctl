@@ -11,6 +11,7 @@ import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
 import { clearCommand } from './commands/clear.js';
+import { agentRun, agentHealth, agentTools, agentMemory, agentPlan } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
 import { getConfig } from './utils/config.js';
@@ -107,6 +108,78 @@ function createCLI(): Command {
     .action(async (provider?: ProviderName) => {
       try {
         await authCommand.logout(provider);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
+  // AGENT COMMANDS
+  // ============================================================================
+
+  const agent = program.command('agent').description('Agent management and monitoring');
+
+  agent
+    .command('run <task>')
+    .description('Run agent with a task')
+    .option('-p, --provider <provider>', 'Specify provider')
+    .option('--yolo', 'YOLO mode - no confirmations')
+    .option('-v, --verbose', 'Verbose output')
+    .action(async (task: string, options: { provider?: string; yolo?: boolean; verbose?: boolean }) => {
+      try {
+        await agentRun(task, options);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('health')
+    .description('Show agent health status')
+    .action(async () => {
+      try {
+        await agentHealth();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('tools')
+    .description('List available agent tools')
+    .action(async () => {
+      try {
+        await agentTools();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('memory')
+    .description('Show agent memory')
+    .option('-s, --session <id>', 'Specific session')
+    .option('-l, --limit <number>', 'Limit sessions shown')
+    .option('-e, --export <file>', 'Export to file')
+    .action(async (options: { session?: string; limit?: number; export?: string }) => {
+      try {
+        await agentMemory(options);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  agent
+    .command('plan')
+    .description('Show current agent plan')
+    .action(async () => {
+      try {
+        await agentPlan();
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
         process.exit(1);
