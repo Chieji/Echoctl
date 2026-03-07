@@ -163,6 +163,16 @@ echo agent run "my task"
 
 # Show current agent plan
 echo agent plan
+
+# View event logs
+echo agent logs
+
+# Configure settings (plan mode, auto-accept)
+echo agent config --status        # Show current config
+echo agent config --plan          # Enable plan mode
+echo agent config --no-plan       # Disable plan mode
+echo agent config --auto-accept   # Auto-confirm actions
+echo agent config --no-auto-accept # Require confirmations
 ```
 
 ### Authentication
