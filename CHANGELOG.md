@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2024-03-06
+## [1.0.0] - 2024-03-13
 
 ### ✨ Added
 
-#### Providers (14 Total)
+#### Providers (14 Total - All Implemented)
 - **OpenAI** - GPT-4, GPT-4o, GPT-4o-mini support
 - **Gemini** - Google AI with free tier
 - **Anthropic** - Claude 3.5 Sonnet, Opus, Haiku
@@ -38,38 +38,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **LSP Integration** - Symbol rename, find references, refactoring
 - **MCP Support** - Plugin architecture for extended capabilities
 
-#### Tools (7)
-- `run_command` - Shell command execution
+#### Tools (20+)
+- `run_command` - Shell command execution with security filtering
 - `readFile` / `writeFile` - File I/O
 - `listFiles` / `deleteFile` - Directory operations
 - `executePython` / `executeNode` - Code execution
+- `searchWeb` / `scrapeUrl` / `getNews` - Web tools
+- `getGitStatus` / `gitAdd` / `gitCommit` / `gitPush` / `gitLog` - Git tools
+- `findAndReplace` / `searchInFiles` / `createFiles` - Multi-file tools
+- `findSymbolReferences` / `renameSymbol` / `findSymbolDefinition` - LSP tools
+- `browserNavigate` / `browserScreenshot` / `browserClick` / `browserType` - Browser tools
 
-#### CLI Commands
-- `echo auth login` - Interactive API key setup
-- `echo auth sync` - Auto-detect credentials
-- `echo auth detect` - Show available credentials
-- `echo chat` - Standard chat mode
-- `echo chat --agent` - ReAct agent mode
-- `echo chat --yolo` - Autonomous mode
-- `echo mcp` - MCP server management
-- `echo config` - Configuration management
-- `echo clear` - History/session management
-- `echo sessions` - Session listing
+#### Second Brain (NEW)
+- `echo brain save` - Save knowledge with tags
+- `echo brain get` - Retrieve by key
+- `echo brain search` - Full-text search
+- `echo brain list` - List all memories
+- `echo brain delete` - Remove memories
+- `echo brain stats` - View statistics
+- `echo brain export` / `import` - Backup and restore
 
-#### UI/UX
-- **ASCII Startup Banner** - Gemini-style gradient logo
-- **Provider Status Bar** - Real-time sync status
-- **Gradient Theme** - Blue to purple gradient
-- **Quick Tips** - Helpful hints on launch
-- **Rich Output** - Colored, formatted responses
+#### HITL Approvals (NEW)
+- `echo approve list` - View pending approvals
+- `echo approve <id> --yes/--no` - Submit decisions
+- `echo approve stats` - View statistics
+- `echo approve add-rule` - Add auto-approve rules
+- `echo approve remove-rule` - Remove rules
+- `echo approve clear` - Clear pending queue
 
-#### Documentation
-- `SOUL.md` - AI personality and ethics
-- `AGENTS.md` - How Echo operates
-- `TOOLS.md` - Tool documentation
-- `ECHO.md` - Project context template
-- `CONTRIBUTING.md` - Contribution guidelines
-- `README.md` - Comprehensive usage guide
+#### Development Tracks (NEW)
+- `echo track new` - Create isolated contexts
+- `echo track list` - List all tracks
+- `echo track switch` - Switch between tracks
+- `echo track status` - Show current track
+- `echo track delete` - Remove tracks
+- `echo track export` / `import` - Backup and share
+- `echo track config` - Configure per-track settings
+
+#### Interactive TUI (NEW)
+- Real-time dashboard with Ink (React for CLI)
+- Tab-based navigation (Overview, Providers, Sessions, Brain, Approvals)
+- Live statistics updates
+- Keyboard shortcuts (Tab to switch, Q to exit)
+
+#### Security Hardening (NEW)
+- Machine-specific encryption key derivation
+- Rate limiting tracking per provider
+- Enhanced dangerous command detection (20+ patterns)
+- Security audit function
+- Command chain detection
+
+#### Session Management
+- Persistent session storage with lowdb
+- Token count tracking
+- Auto-pruning of old sessions
+- Session export/import
+
+#### Plugin System
+- Universal sync from Claude, Gemini, Qwen
+- npm-based plugin installation
+- Enable/disable without uninstall
+
+#### Testing
+- Jest test suite with 150+ tests
+- Tests for sessions, brain, approvals, config, smart-mode, executor
+- Coverage reporting (~40% baseline)
 
 ### 🔧 Technical
 
@@ -78,18 +111,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESM-first package structure
 - Modular provider system
 - Pluggable tool architecture
-- SQLite/JSON hybrid storage
+- lowdb for JSON persistence
 
 #### Storage
-- `~/.config/echo-cli/config.json` - Configuration
-- `~/.config/echo-cli/history.json` - Conversation history
+- `~/.config/echo-cli/config.json` - Configuration (encrypted)
+- `~/.config/echo-cli/sessions.json` - Session storage
+- `~/.config/echo-cli/brain.json` - Second Brain
+- `~/.config/echo-cli/approvals.json` - HITL queue
+- `~/.config/echo-cli/tracks.json` - Development tracks
 - `~/.config/echo-cli/mcp.json` - MCP servers
 
 #### Security
-- Command allowlisting
-- Dangerous pattern blocking
+- Command allowlisting with pattern detection
+- Dangerous pattern blocking (20+ patterns)
 - Confirmation prompts (unless --yolo)
-- API key encryption
+- Machine-specific API key encryption
 - Rate limiting awareness
 
 #### Performance
@@ -103,11 +139,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `chalk` - Terminal colors
 - `ora` - Loading spinners
 - `enquirer` - Interactive prompts
-- `conf` - Config storage
+- `conf` - Config storage with encryption
 - `lowdb` - JSON database
 - `axios` - HTTP client
 - `figlet` - ASCII art
 - `gradient-string` - Color gradients
+- `ink` - React for CLI (TUI)
+- `playwright` - Browser automation
+- `uuid` - Unique IDs
+
+### 📝 Documentation
+- `SOUL.md` - AI personality and ethics
+- `AGENTS.md` - How Echo operates
+- `TOOLS.md` - Tool documentation
+- `ECHO.md` - Project context template
+- `CONTRIBUTING.md` - Contribution guidelines
+- `README.md` - Comprehensive usage guide
+- `SECURITY.md` - Security practices
+- `DEPLOYMENT.md` - Publishing guide
+- `CHANGELOG.md` - This file
+
+### 🐛 Bug Fixes
+- Fixed provider chain initialization (was only 3, now all 14)
+- Added tokenCount to Session type
+- Fixed brain.test.ts test isolation
+- Fixed auth.test.ts flaky tests
+- Fixed providers.test.ts edge cases
+
+### ⚠️ Breaking Changes
+- None (first release)
 
 ---
 
@@ -119,17 +179,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] Voice input support
 - [ ] Image generation tools
 - [ ] Multi-file editing
-- [ ] Git integration
+- [ ] Git integration enhancements
 - [ ] Database tools
-- [ ] Web scraping tools
+- [ ] Web scraping enhancements
+- [ ] Multi-agent collaboration
+- [ ] WebSocket real-time updates
 
 ---
 
 ## Version History
 
-| Version | Date | Providers | Features |
-|---------|------|-----------|----------|
-| 1.0.0 | 2024-03-06 | 14 | Initial release |
+| Version | Date | Providers | Features | Tests |
+|---------|------|-----------|----------|-------|
+| 1.0.0 | 2024-03-13 | 14 | Initial release | 150+ |
+
+---
+
+## Migration Guide
+
+### From Beta to v1.0.0
+
+No migration needed - first stable release!
+
+### Upgrading from v0.x
+
+If you were using the beta version:
+
+1. Backup your config:
+   ```bash
+   cp ~/.config/echo-cli/config.json ~/.config/echo-cli/config.json.backup
+   ```
+
+2. Reinstall:
+   ```bash
+   npm uninstall -g echo-ai-cli
+   npm install -g @chieji/echo-ai-cli
+   ```
+
+3. Re-authenticate:
+   ```bash
+   echo auth sync
+   ```
 
 ---
 

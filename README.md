@@ -1,65 +1,52 @@
-# Echo CLI
+# Echoctl - The Ultimate AI CLI Agent
 
-> **Your thoughts. My echo. The Ultimate Agentic Terminal.**
+> **Your thoughts. My echo. Infinite possibility.**
 
-A resilient, multi-provider AI CLI tool with ReAct agent capabilities, automatic failover, and local code execution. Echo mimics the Google Gemini CLI experience but supports 14+ providers.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/chieji/echoctl)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+A resilient, multi-provider AI CLI tool with ReAct agent capabilities, automatic failover, and local code execution. Echo supports **14+ AI providers** and includes a Second Brain knowledge base, HITL approvals, and development track isolation.
+
+---
 
 ## ✨ Features
 
-### 🎨 Professional UI
-- **ASCII Startup Banner** - Gemini-style gradient logo on launch
-- **Provider Status Bar** - Real-time sync status for all providers
-- **Gradient Colors** - Beautiful blue-to-purple gradient theme
-- **Quick Tips** - Helpful hints on each launch
+### 🎯 Core Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **14+ Providers** | OpenAI, Gemini, Claude, Groq, Ollama, and 9 more with auto-failover |
+| **ReAct Agent** | Reason → Act → Observe loop for autonomous task completion |
+| **Second Brain** | Persistent knowledge base with tags and search |
+| **HITL Approvals** | Human-in-the-loop for dangerous operations |
+| **Track Isolation** | Separate contexts for different projects |
+| **Interactive TUI** | Real-time dashboard with Ink (React for CLI) |
+| **Smart Mode** | Auto-selects best provider based on task type |
+| **Security First** | Encrypted config, dangerous command blocking, rate limiting |
 
 ### 🧠 ReAct Agent Mode
+
 Echo follows the **Reason + Act** pattern:
 1. **Reason** - Thinks about what needs to be done
-2. **Act** - Executes tools (shell commands, file I/O, code execution)
+2. **Act** - Executes tools (shell, files, code, web, browser)
 3. **Observe** - Analyzes results
 4. **Repeat** - Until task is complete
 
 ### 🔄 Automatic Failover
+
 If your primary provider fails (rate limit, API error), Echo automatically switches to your backup provider. No interrupted workflows.
 
-### 🎯 Smart Provider Selection
-Echo automatically selects the best provider based on your task:
-- **Code/Logic** → OpenAI (best for programming)
-- **Creative/Long-form** → Gemini (best for content)
-- **Nuance/Ethics** → Claude (best for sensitive topics)
+---
 
-### 📄 ECHO.md Context
-Place an `ECHO.md` file in your project root to define:
-- Tech stack
-- Coding standards
-- Project rules
-- Custom instructions
+## 🚀 Quick Start
 
-Echo reads this automatically and adapts its responses.
-
-### 🔧 Tool Execution
-Echo can execute:
-- Shell commands (`run_command`)
-- File operations (`readFile`, `writeFile`, `listFiles`, `deleteFile`)
-- Code execution (`executePython`, `executeNode`)
-
-### 🤖 YOLO Mode
-Use `--yolo` flag for autonomous execution without confirmation prompts.
-
-### 📡 MCP Integration
-Connect to Model Context Protocol servers for extended capabilities:
-- GitHub integration
-- Enhanced filesystem operations
-- Web search capabilities
-- Custom skills
-
-## Installation
+### Installation
 
 ```bash
+# From npm (coming soon)
+npm install -g @chieji/echo-ai-cli
+
 # From source
 git clone https://github.com/chieji/echoctl.git
 cd echoctl
@@ -71,12 +58,10 @@ npm link
 echo "Hello, Echo!"
 ```
 
-## Quick Start
-
 ### 1. Authenticate
 
 ```bash
-# Auto-detect existing credentials
+# Auto-detect existing credentials (gcloud, aliyun, env vars)
 echo auth sync
 
 # Or interactive setup
@@ -87,12 +72,22 @@ echo auth status
 ```
 
 **Supported Providers:**
-- 🟩 **Google Gemini** - Free tier (60 requests/min)
-- 🟦 **OpenAI** - GPT-4, GPT-4o
-- 🟪 **Anthropic Claude** - Claude 3.5 Sonnet
-- 🟥 **Alibaba Qwen** - Free tier via Aliyun
-- 🟢 **Groq** - Ultra-fast inference
-- 🟨 **Ollama** - Local models (free)
+| Provider | Status | Free Tier |
+|----------|--------|-----------|
+| 🟩 Google Gemini | ✅ Configured | 60 req/min |
+| 🟦 OpenAI | ✅ Configured | Paid |
+| 🟪 Anthropic Claude | ✅ Configured | Paid |
+| 🟥 Alibaba Qwen | ✅ Configured | Free via Aliyun |
+| 🟢 Groq | ✅ Configured | Free tier |
+| 🟨 Ollama | ✅ Configured | Free (local) |
+| 🔵 DeepSeek | ✅ Configured | Paid |
+| 🔴 Kimi | ✅ Configured | Paid |
+| 🔷 OpenRouter | ✅ Configured | Varies |
+| 🟠 Together AI | ✅ Configured | Free tier |
+| 🔴 ModelScope | ✅ Configured | Free tier |
+| 🟣 Mistral | ✅ Configured | Paid |
+| 🟡 Hugging Face | ✅ Configured | Free tier |
+| ⬛ GitHub Models | ✅ Configured | Free tier |
 
 ### 2. Standard Chat
 
@@ -114,20 +109,12 @@ echo chat "Count the lines of code in all .ts files" --agent
 
 # Git operations
 echo chat "Check git status and commit changes" --agent
-echo chat "Push to main branch" --agent
 
 # Multi-file operations
 echo chat "Rename all getUser() to fetchUser() in the project" --agent
-echo chat "Find all references to UserService" --agent
-
-# Browser automation
-echo chat "Navigate to example.com and take a screenshot" --agent
-echo chat "Search Google for TypeScript tutorials" --agent
-echo chat "Extract all links from https://example.com" --agent
 
 # Web search (no API key needed!)
 echo chat "Search for latest TypeScript news" --agent
-echo chat "Scrape the pricing from https://example.com/pricing" --agent
 echo chat "Get latest tech news" --agent
 
 # YOLO mode - No confirmation prompts
@@ -139,12 +126,14 @@ echo chat "Create a new file called test.js with console.log('hello')" --agent -
 - 📁 **Files**: `readFile`, `writeFile`, `listFiles`, `deleteFile`
 - 💻 **Code**: `executePython`, `executeNode`
 - 🌐 **Web**: `searchWeb`, `scrapeUrl`, `getNews`
-- 🌍 **Browser**: `browserNavigate`, `browserScreenshot`, `browserClick`, `browserType`, `browserExtract`
+- 🌍 **Browser**: `navigate`, `screenshot`, `click`, `type`, `extract`
 - 📦 **Git**: `getGitStatus`, `gitAdd`, `gitCommit`, `gitPush`, `gitLog`
 - 📝 **Multi-File**: `findAndReplace`, `searchInFiles`, `createFiles`
 - 🔬 **LSP**: `findSymbolReferences`, `renameSymbol`, `findSymbolDefinition`
 
-## Commands
+---
+
+## 📚 Command Reference
 
 ### Agent Management
 
@@ -167,23 +156,22 @@ echo agent plan
 # View event logs
 echo agent logs
 
-# Configure settings (plan mode, auto-accept)
+# Configure settings
 echo agent config --status        # Show current config
 echo agent config --plan          # Enable plan mode
-echo agent config --no-plan       # Disable plan mode
 echo agent config --auto-accept   # Auto-confirm actions
-echo agent config --no-auto-accept # Require confirmations
 ```
 
 ### Authentication
 
 ```bash
 echo auth login              # Interactive API key setup
+echo auth sync               # Auto-detect from gcloud, aliyun, env
 echo auth status             # Show configured providers
 echo auth logout [provider]  # Remove a provider
 ```
 
-### Chat
+### Chat & Sessions
 
 ```bash
 # Standard chat
@@ -192,31 +180,110 @@ echo chat "message"
 
 # Options:
 #   -p, --provider    Specify provider (openai, gemini, anthropic)
-#   -s, --smart       Use smart mode
+#   -s, --smart       Use smart mode (auto-select provider)
 #   --session <id>    Use specific session
-#   -r, --raw         Raw output
+#   -r, --raw         Raw output mode
 #   -a, --agent       Agent mode (ReAct with tools)
 #   --yolo            Execute without confirmation (use with --agent)
 
 echo chat "Debug this" --provider openai
 echo chat "Write a poem" --smart
 echo chat "Analyze this codebase" --agent
-echo chat "Fix all bugs" --agent --yolo  # ⚠️ Autonomous mode
-```
 
-### Sessions
-
-```bash
+# Session management
 echo new-session "Project X"   # Start new session
 echo sessions                  # List sessions
 echo stats                     # Show statistics
+```
+
+### Second Brain (Knowledge Base)
+
+```bash
+# Save a memory
+echo brain save "api-key" "sk-123456" --tag credentials --tag openai
+
+# Retrieve a memory
+echo brain get "api-key"
+
+# Search memories
+echo brain search "api"
+echo brain search "credentials" --tag openai
+
+# List all memories
+echo brain list
+
+# Delete a memory
+echo brain delete "api-key"
+
+# Statistics
+echo brain stats
+
+# Export/Import
+echo brain export -o backup.json
+echo brain import backup.json
+```
+
+### HITL Approvals
+
+```bash
+# List pending approvals
+echo approve list
+
+# Approve or deny
+echo approve <id> --yes
+echo approve <id> --no
+
+# Statistics
+echo approve stats
+
+# Auto-approve rules
+echo approve add-rule "readFile"
+echo approve remove-rule "readFile"
+echo approve enable-rule "readFile"
+echo approve disable-rule "readFile"
+
+# Clear pending
+echo approve clear
+```
+
+### Development Tracks
+
+```bash
+# Create a new track
+echo track new "project-x" --description "Project X development"
+
+# List tracks
+echo track list
+
+# Switch to a track
+echo track switch "project-x"
+
+# Show current track
+echo track status
+
+# Configure track
+echo track config "project-x" --provider openai --context-length 20
+
+# Delete a track
+echo track delete "project-x"
+
+# Export/Import
+echo track export "project-x" -o track.json
+echo track import track.json
+```
+
+### Dashboard
+
+```bash
+# Launch interactive TUI dashboard
+echo dashboard
 ```
 
 ### Clear History
 
 ```bash
 echo clear history    # Clear current session
-echo clear session    # Delete current session
+echo clear session    # Delete current session entirely
 echo clear all        # Delete everything (irreversible!)
 ```
 
@@ -232,6 +299,23 @@ echo mcp install @echo/github  # Install skill package
 echo mcp skills                # List installed skills
 ```
 
+### Plugins
+
+```bash
+# Sync from other AI CLIs
+echo plugin sync-all           # Sync from Claude, Gemini, Qwen
+echo plugin sync-from claude   # Sync from Claude only
+echo plugin sync-from gemini   # Sync from Gemini only
+echo plugin sync-from qwen     # Sync from Qwen only
+
+# Manage plugins
+echo plugin list               # List installed plugins
+echo plugin install <package>  # Install from npm
+echo plugin uninstall <name>   # Remove a plugin
+echo plugin enable <name>      # Enable a plugin
+echo plugin disable <name>     # Disable a plugin
+```
+
 ### Configuration
 
 ```bash
@@ -241,10 +325,19 @@ echo config set smart-mode true
 echo config set context-length 10
 ```
 
-## ECHO.md Format
+---
 
-Create an `ECHO.md` file in your project root:
+## 📁 ECHO.md Context
 
+Place an `ECHO.md` file in your project root to define:
+- Tech stack
+- Coding standards
+- Project rules
+- Custom instructions
+
+Echo reads this automatically and adapts its responses.
+
+**Template:**
 ```markdown
 ## Project Name
 My API Service
@@ -267,127 +360,95 @@ REST API with authentication
 - 2 space indentation
 - Single quotes
 - Semicolons required
-
-## Custom Instructions
-When suggesting changes, consider backward compatibility.
 ```
 
-Echo automatically loads this context and adapts its responses.
+---
 
-## Tool Execution
+## 🔒 Security
 
-In **Agent Mode**, Echo can use these tools:
+### Command Execution Safety
 
-| Tool | Description | Requires Confirmation |
-|------|-------------|----------------------|
-| `run_command` | Execute shell commands | Yes (unless --yolo) |
-| `readFile` | Read file contents | No |
-| `writeFile` | Write to files | Yes |
-| `listFiles` | List directory | No |
-| `deleteFile` | Delete files/dirs | Yes |
-| `executePython` | Run Python code | Yes |
-| `executeNode` | Run Node.js code | Yes |
+Echo blocks these patterns by default:
+- `rm -rf /`
+- `rm -rf *`
+- `dd if=/dev/zero`
+- Fork bombs
+- Format commands
+- `wget | sh` (download and execute)
 
-### Example Agent Tasks
+### Confirmation Prompts
 
-```bash
-# Code analysis
-echo chat "Find all unused imports in src/" --agent
+By default, Echo asks for confirmation before:
+- Running shell commands
+- Writing files
+- Deleting files
+- Executing code
 
-# File operations
-echo chat "Create a README.md with project structure" --agent
+Use `--yolo` mode only when you trust the task completely.
 
-# Data processing
-echo chat "Calculate total lines of code across all .ts files" --agent
+### API Key Security
 
-# Automated fixes
-echo chat "Add error handling to all async functions" --agent --yolo
-```
+- Keys stored with machine-specific encryption
+- Never logged or displayed in full
+- Can be rotated anytime with `echo auth logout`
 
-## Provider Failover
+---
 
-Echo tries providers in this order by default:
-1. **Gemini** (default)
-2. **OpenAI** (fallback)
-3. **Anthropic** (last resort)
-
-When a provider fails:
-```
-⚠️  GEMINI failed: Rate limit exceeded
-→ Switching to OPENAI...
-
-🟦 OpenAI
-[Response continues seamlessly]
-```
-
-## Configuration
-
-### Config Location
-- **Config:** `~/.config/echo-cli-nodejs/config.json`
-- **History:** `~/.config/echo-cli/history.json`
-- **MCP:** `~/.config/echo-cli/mcp.json`
-
-### Environment Variables
-
-```bash
-export ECHO_DEFAULT_PROVIDER=gemini
-export ECHO_SMART_MODE=true
-export ECHO_CONTEXT_LENGTH=10
-```
-
-## API Setup
-
-### Google Gemini
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create API key
-3. `echo auth login` → Select Gemini
-
-### OpenAI
-1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Create API key
-3. `echo auth login` → Select OpenAI
-
-### Anthropic
-1. Visit [Anthropic Console](https://console.anthropic.com/)
-2. Create API key
-3. `echo auth login` → Select Anthropic
-
-## Project Structure
+## 🏗 Architecture
 
 ```
 echoctl/
 ├── src/
 │   ├── index.ts              # CLI entry point
+│   ├── commands/             # CLI commands
+│   │   ├── auth.ts           # Authentication
+│   │   ├── chat.ts           # Chat & sessions
+│   │   ├── agent.ts          # Agent management
+│   │   ├── brain.ts          # Second Brain
+│   │   ├── approve.ts        # HITL approvals
+│   │   ├── track.ts          # Development tracks
+│   │   ├── plugin.ts         # Plugin sync
+│   │   └── tui.ts            # Dashboard
 │   ├── core/
-│   │   └── engine.ts         # ReAct engine loop
-│   ├── commands/
-│   │   ├── auth.ts           # Auth commands
-│   │   ├── chat.ts           # Chat commands
-│   │   └── clear.ts          # Clear commands
-│   ├── providers/
-│   │   ├── base.ts           # Abstract provider
-│   │   ├── openai.ts         # OpenAI impl
-│   │   ├── gemini.ts         # Gemini impl
-│   │   ├── anthropic.ts      # Anthropic impl
-│   │   └── chain.ts          # Failover chain
-│   ├── tools/
-│   │   ├── executor.ts       # Tool execution
-│   │   └── context-loader.ts # ECHO.md loader
-│   ├── utils/
-│   │   ├── config.ts         # Config storage
-│   │   ├── memory.ts         # Session management
-│   │   └── smart-mode.ts     # Provider selection
-│   ├── storage/
-│   │   └── mcp.ts            # MCP integration
-│   └── types/
-│       └── index.ts          # TypeScript types
-├── ECHO.md.template          # Template context file
-├── package.json
-├── tsconfig.json
-└── build.sh                  # Build script
+│   │   └── engine.ts         # ReAct engine
+│   ├── providers/            # AI providers (14)
+│   ├── tools/                # Tool executors
+│   ├── storage/              # Data persistence
+│   │   ├── sessions.ts       # Session storage
+│   │   ├── brain.ts          # Knowledge base
+│   │   ├── approvals.ts      # HITL queue
+│   │   ├── tracks.ts         # Track isolation
+│   │   └── mcp.ts            # MCP servers
+│   ├── utils/                # Utilities
+│   │   ├── config.ts         # Config management
+│   │   ├── smart-mode.ts     # Task classifier
+│   │   └── security.ts       # Security checks
+│   └── tui/                  # TUI components
+│       └── dashboard.tsx     # Ink dashboard
+├── tests/                    # Jest tests
+└── ECHO.md.template          # Context template
 ```
 
-## Development
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# With coverage
+npm run test:coverage
+
+# Watch mode
+npm run test:watch
+```
+
+**Current Coverage:** ~40% (target: 60%+)
+
+---
+
+## 🛠 Development
 
 ```bash
 # Install dependencies
@@ -402,65 +463,59 @@ npm run build
 # Test
 npm test
 
-# Lint
+# Lint (coming soon)
 npm run lint
 ```
 
-## Safety & Security
+---
 
-### Command Execution Safety
+## 📊 Roadmap
 
-Echo blocks dangerous commands by default:
-- `rm -rf /`
-- `rm -rf *`
-- `dd if=/dev/zero`
-- Fork bombs
-- Format commands
+### Completed (v1.0.0)
+- ✅ 14 provider implementations
+- ✅ Session storage with persistence
+- ✅ Second Brain knowledge base
+- ✅ HITL approval system
+- ✅ Development track isolation
+- ✅ Interactive TUI dashboard
+- ✅ Security hardening (encryption, rate limiting)
+- ✅ Smart mode task classification
+- ✅ Comprehensive test suite
 
-### Confirmation Prompts
+### Planned (v2.0)
+- [ ] Voice input support
+- [ ] Image generation tools
+- [ ] Database tools (SQL, NoSQL)
+- [ ] Enhanced LSP integration
+- [ ] Multi-agent collaboration
+- [ ] WebSocket real-time updates
+- [ ] Plugin marketplace
 
-By default, Echo asks for confirmation before:
-- Running shell commands
-- Writing files
-- Deleting files
-- Executing code
+---
 
-Use `--yolo` mode only when you trust the task completely.
-
-### API Key Security
-
-- Keys stored encrypted in local config
-- Never logged or displayed in full
-- Can be removed anytime with `echo auth logout`
-
-## Troubleshooting
-
-### "No providers configured"
-Run `echo auth login` to set up API keys.
-
-### Agent mode not executing tools
-Make sure to use `--agent` flag. Standard chat mode doesn't execute tools.
-
-### YOLO mode dangerous
-⚠️ **Warning:** YOLO mode executes commands without confirmation. Only use with trusted tasks.
-
-### Rate limits
-Echo automatically fails over to other providers. Configure multiple providers for reliability.
-
-### ECHO.md not loading
-Ensure the file is named exactly `ECHO.md` (case-sensitive) in your project root or parent directories.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Run tests: `npm test`
 5. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- ReAct pattern inspired by [Google's ReAct paper](https://arxiv.org/abs/2210.03629)
+- MCP integration following [Model Context Protocol spec](https://modelcontextprotocol.io/)
+- TUI built with [Ink](https://github.com/vadimdemedes/ink) - React for CLI
 
 ---
 
@@ -468,6 +523,5 @@ MIT License - see [LICENSE](LICENSE) for details.
     <b>Built with ♥ by chieji</b><br>
     <i>Your thoughts. My echo. Infinite possibility.</i><br>
     <br>
-    <sub>ReAct pattern inspired by Google's ReAct paper</sub><br>
-    <sub>MCP integration following Model Context Protocol spec</sub>
+    <sub>Questions? Open an issue on GitHub</sub>
 </div>

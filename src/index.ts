@@ -11,6 +11,9 @@ import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
 import { clearCommand } from './commands/clear.js';
+import { brainCommand } from './commands/brain.js';
+import { approveCommand } from './commands/approve.js';
+import { trackCommand } from './commands/track.js';
 import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig, agentDoctor } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
@@ -337,6 +340,219 @@ function createCLI(): Command {
     });
 
   // ============================================================================
+  // BRAIN COMMANDS (Second Brain Knowledge Base)
+  // ============================================================================
+
+  const brain = program.command('brain').description('Second Brain - Manage knowledge base');
+
+  brain
+    .command('save <key> <value>')
+    .description('Save a memory item')
+    .option('-t, --tag <tag>', 'Add tags (can be used multiple times)', (val: string, prev: string[]) => [...prev, val], [])
+    .action(async (key: string, value: string, options: { tag: string[] }) => {
+      try {
+        await brainCommand.save(key, value, options.tag);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('get <key>')
+    .description('Retrieve a memory by key')
+    .action(async (key: string) => {
+      try {
+        await brainCommand.get(key);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('search <query>')
+    .description('Search memories')
+    .option('-t, --tag <tag>', 'Filter by tags', (val: string, prev: string[]) => [...prev, val], [])
+    .action(async (query: string, options: { tag: string[] }) => {
+      try {
+        await brainCommand.search(query, options.tag);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('list')
+    .description('List all memories')
+    .option('-l, --limit <number>', 'Limit results', parseInt)
+    .action(async (options: { limit?: number }) => {
+      try {
+        await brainCommand.list(options.limit);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('delete <key>')
+    .description('Delete a memory')
+    .option('-f, --force', 'Skip confirmation')
+    .action(async (key: string, options: { force?: boolean }) => {
+      try {
+        await brainCommand.delete(key, options.force);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('stats')
+    .description('Show brain statistics')
+    .action(async () => {
+      try {
+        await brainCommand.stats();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('export')
+    .description('Export memories to JSON')
+    .option('-o, --output <file>', 'Output file path')
+    .action(async (options: { output?: string }) => {
+      try {
+        await brainCommand.export(options.output);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  brain
+    .command('import <file>')
+    .description('Import memories from JSON')
+    .action(async (file: string) => {
+      try {
+        await brainCommand.import(file);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
+  // APPROVE COMMANDS (HITL - Human in the Loop)
+  // ============================================================================
+
+  const approve = program.command('approve').description('HITL - Manage approval queue');
+
+  approve
+    .command('list')
+    .description('List pending approvals')
+    .action(async () => {
+      try {
+        await approveCommand.list();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('<id>')
+    .description('Submit approval decision')
+    .option('-y, --yes', 'Approve the request')
+    .option('-n, --no', 'Deny the request')
+    .action(async (id: string, options: { yes?: boolean; no?: boolean }) => {
+      try {
+        const approved = options.yes ? true : options.no ? false : undefined;
+        await approveCommand.submit(id, approved);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('stats')
+    .description('Show approval statistics')
+    .action(async () => {
+      try {
+        await approveCommand.stats();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('add-rule <tool-pattern>')
+    .description('Add auto-approve rule')
+    .option('-p, --param <pattern>', 'Parameter pattern')
+    .action(async (toolPattern: string, options: { param?: string }) => {
+      try {
+        await approveCommand.addRule(toolPattern, options.param);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('remove-rule <tool-pattern>')
+    .description('Remove auto-approve rule')
+    .action(async (toolPattern: string) => {
+      try {
+        await approveCommand.removeRule(toolPattern);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('enable-rule <tool-pattern>')
+    .description('Enable auto-approve rule')
+    .action(async (toolPattern: string) => {
+      try {
+        await approveCommand.toggleRule(toolPattern, true);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('disable-rule <tool-pattern>')
+    .description('Disable auto-approve rule')
+    .action(async (toolPattern: string) => {
+      try {
+        await approveCommand.toggleRule(toolPattern, false);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  approve
+    .command('clear')
+    .description('Clear all pending approvals')
+    .action(async () => {
+      try {
+        await approveCommand.clear();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
   // PLUGIN COMMANDS (Universal Sync)
   // ============================================================================
 
@@ -542,6 +758,118 @@ function createCLI(): Command {
 
         skills.forEach(skill => console.log(`  • ${skill}`));
         console.log('');
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
+  // TRACK COMMANDS (Development Context Isolation)
+  // ============================================================================
+
+  const track = program.command('track').description('Development tracks - Isolate project contexts');
+
+  track
+    .command('new <name>')
+    .description('Create a new development track')
+    .option('-d, --description <desc>', 'Track description')
+    .action(async (name: string, options: { description?: string }) => {
+      try {
+        await trackCommand.new(name, options.description);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('list')
+    .description('List all tracks')
+    .action(async () => {
+      try {
+        await trackCommand.list();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('switch <name>')
+    .description('Switch to a track')
+    .action(async (name: string) => {
+      try {
+        await trackCommand.switch(name);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('status')
+    .description('Show current track status')
+    .action(async () => {
+      try {
+        await trackCommand.status();
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('delete <name>')
+    .description('Delete a track')
+    .option('-f, --force', 'Skip confirmation')
+    .action(async (name: string, options: { force?: boolean }) => {
+      try {
+        await trackCommand.delete(name, options.force);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('export <name>')
+    .description('Export track to JSON')
+    .option('-o, --output <file>', 'Output file path')
+    .action(async (name: string, options: { output?: string }) => {
+      try {
+        await trackCommand.export(name, options.output);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('import <file>')
+    .description('Import track from JSON')
+    .action(async (file: string) => {
+      try {
+        await trackCommand.import(file);
+      } catch (error) {
+        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  track
+    .command('config <name>')
+    .description('Configure track settings')
+    .option('-p, --provider <provider>', 'Default provider')
+    .option('-c, --context-length <number>', 'Context length', parseInt)
+    .option('-a, --auto-approve <tools>', 'Comma-separated auto-approve tools')
+    .action(async (name: string, options: { provider?: string; contextLength?: number; autoApprove?: string }) => {
+      try {
+        await trackCommand.config(name, {
+          provider: options.provider,
+          contextLength: options.contextLength,
+          autoApprove: options.autoApprove,
+        });
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
         process.exit(1);

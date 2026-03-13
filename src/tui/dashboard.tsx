@@ -1,148 +1,293 @@
 /**
- * Echo TUI Dashboard
- * Real-time terminal dashboard using Ink (React for CLI)
+ * Interactive Dashboard with Ink (React for CLI)
+ * Real-time monitoring and control
  */
 
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useApp, useInput } from 'ink';
+import { render, Box, Text, Newline, useStdout, useInput } from 'ink';
 import Spinner from 'ink-spinner';
+import chalk from 'chalk';
 import gradient from 'gradient-string';
+import { getConfig } from '../utils/config.js';
+import { getSessionStore } from '../storage/sessions.js';
+import { getBrainStore } from '../storage/brain.js';
+import { getApprovalsStore } from '../storage/approvals.js';
 
-interface DashboardProps {
-  providers: Array<{ name: string; configured: boolean }>;
-  sessions: number;
-  tokens: number;
-  lastActivity: string;
+interface ProviderStatus {
+  name: string;
+  configured: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({
-  providers,
-  sessions,
-  tokens,
-  lastActivity,
-}) => {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const { exit } = useApp();
+interface DashboardStats {
+  sessions: number;
+  messages: number;
+  tokens: number;
+  memories: number;
+  pendingApprovals: number;
+}
 
+const Dashboard: React.FC = () => {
+  const { stdout } = useStdout();
+  const [stats, setStats] = useState<DashboardStats>({
+    sessions: 0,
+    messages: 0,
+    tokens: 0,
+    memories: 0,
+    pendingApprovals: 0,
+  });
+  const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [exitRequested, setExitRequested] = useState(false);
+
+  const tabs = ['Overview', 'Providers', 'Sessions', 'Brain', 'Approvals'];
+
+  // Handle keyboard input
   useInput((input, key) => {
-    if (input === 'q' || input === 'Q' || key.escape) {
-      exit();
+    if (key.tab) {
+      setSelectedTab((prev) => (prev + 1) % tabs.length);
     }
+    if (input === 'q' || input === 'Q' || key.ctrl && input === 'c') {
+      setExitRequested(true);
+      process.exit(0);
+    }
+    if (input === '1') setSelectedTab(0);
+    if (input === '2') setSelectedTab(1);
+    if (input === '3') setSelectedTab(2);
+    if (input === '4') setSelectedTab(3);
+    if (input === '5') setSelectedTab(4);
   });
 
+  // Update stats periodically
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const updateStats = async () => {
+      const config = getConfig();
+      const sessions = getSessionStore();
+      const brain = getBrainStore();
+      const approvals = getApprovalsStore();
+
+      await sessions.init();
+      await brain.init();
+      await approvals.init();
+
+      const sessionStats = await sessions.getStats();
+      const brainStats = brain.getStats();
+      const approvalStats = approvals.getStats();
+
+      const providerList: ProviderStatus[] = [
+        { name: 'Gemini', configured: config.isProviderConfigured('gemini') },
+        { name: 'OpenAI', configured: config.isProviderConfigured('openai') },
+        { name: 'Claude', configured: config.isProviderConfigured('anthropic') },
+        { name: 'Qwen', configured: config.isProviderConfigured('qwen') },
+        { name: 'Ollama', configured: config.isProviderConfigured('ollama') },
+        { name: 'Groq', configured: config.isProviderConfigured('groq') },
+        { name: 'DeepSeek', configured: config.isProviderConfigured('deepseek') },
+        { name: 'Kimi', configured: config.isProviderConfigured('kimi') },
+        { name: 'OpenRouter', configured: config.isProviderConfigured('openrouter') },
+        { name: 'Together', configured: config.isProviderConfigured('together') },
+        { name: 'ModelScope', configured: config.isProviderConfigured('modelscope') },
+        { name: 'Mistral', configured: config.isProviderConfigured('mistral') },
+        { name: 'HuggingFace', configured: config.isProviderConfigured('huggingface') },
+        { name: 'GitHub', configured: config.isProviderConfigured('github') },
+      ];
+
+      setProviders(providerList);
+      setStats({
+        sessions: sessionStats.totalSessions,
+        messages: sessionStats.totalMessages,
+        tokens: sessionStats.totalTokens,
+        memories: brainStats.totalMemories,
+        pendingApprovals: approvalStats.pending,
+      });
+      setCurrentTime(new Date());
+    };
+
+    updateStats();
+    const interval = setInterval(updateStats, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString();
+  const configuredCount = providers.filter(p => p.configured).length;
+
+  const renderHeader = () => (
+    <Box flexDirection="column" marginBottom={1}>
+      <Text>
+        {gradient.pastel.multiline('╔════════════════════════════════════════════════════════════╗')}
+      </Text>
+      <Text>
+        {gradient.pastel.multiline('║') + ' '}
+        {chalk.white.bold('ECHO DASHBOARD - The Resilient Agentic Terminal')}
+        {gradient.pastel.multiline('║')}
+      </Text>
+      <Text>
+        {gradient.pastel.multiline('╚════════════════════════════════════════════════════════════╝')}
+      </Text>
+      <Newline />
+      <Text>
+        <Text color="gray">Time: </Text>
+        <Text color="white">{currentTime.toLocaleString()}</Text>
+        <Text>  |  </Text>
+        <Text color="gray">Status: </Text>
+        <Text color="green">● Online</Text>
+        <Text>  |  </Text>
+        <Text color="gray">Providers: </Text>
+        <Text color="cyan">{configuredCount}/14</Text>
+      </Text>
+    </Box>
+  );
+
+  const renderTabs = () => (
+    <Box marginBottom={1}>
+      {tabs.map((tab, index) => (
+        <Box
+          key={tab}
+          backgroundColor={index === selectedTab ? 'cyan' : undefined}
+          padding={index === selectedTab ? 1 : 0}
+          marginRight={1}
+        >
+          <Text
+            color={index === selectedTab ? 'black' : 'gray'}
+          >
+            {index + 1}. {tab}
+          </Text>
+        </Box>
+      ))}
+      <Text color="dim"> [Tab to switch, Q to exit]</Text>
+    </Box>
+  );
+
+  const renderOverview = () => (
+    <Box flexDirection="column">
+      <Box borderStyle="round" borderColor="magenta" padding={1} marginBottom={1}>
+        <Text bold color="magenta">📊 Statistics</Text>
+        <Newline />
+        <Text>  Sessions: <Text color="cyan">{stats.sessions}</Text></Text>
+        <Newline />
+        <Text>  Messages: <Text color="cyan">{stats.messages}</Text></Text>
+        <Newline />
+        <Text>  Tokens: <Text color="cyan">{stats.tokens.toLocaleString()}</Text></Text>
+        <Newline />
+        <Text>  Memories: <Text color="cyan">{stats.memories}</Text></Text>
+        <Newline />
+        <Text>  Pending Approvals: <Text color={stats.pendingApprovals > 0 ? 'yellow' : 'green'}>{stats.pendingApprovals}</Text></Text>
+      </Box>
+
+      <Box borderStyle="round" borderColor="green" padding={1}>
+        <Text bold color="green">⚡ Quick Commands</Text>
+        <Newline />
+        <Text dimColor>  echo chat "message"     - Start conversation</Text>
+        <Newline />
+        <Text dimColor>  echo chat --agent       - Agent mode</Text>
+        <Newline />
+        <Text dimColor>  echo plugin sync-all    - Sync plugins</Text>
+        <Newline />
+        <Text dimColor>  echo auth sync          - Auto-detect credentials</Text>
+      </Box>
+    </Box>
+  );
+
+  const renderProviders = () => (
+    <Box borderStyle="round" borderColor="cyan" padding={1} flexDirection="column">
+      <Text bold color="cyan">🔌 Provider Status</Text>
+      <Newline />
+      <Box flexDirection="column">
+        {providers.map((provider, index) => (
+          <Box key={provider.name} marginBottom={0}>
+            <Text>
+              {provider.configured ? (
+                <Text color="green">●</Text>
+              ) : (
+                <Text color="gray">○</Text>
+              )}
+              <Text> </Text>
+              <Text color={provider.configured ? 'white' : 'gray'}>{provider.name}</Text>
+              {index % 2 === 0 && index < providers.length - 1 && (
+                <Text dimColor>  |  </Text>
+              )}
+              {index % 2 === 1 && <Newline />}
+            </Text>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+
+  const renderSessions = () => (
+    <Box borderStyle="round" borderColor="blue" padding={1} flexDirection="column">
+      <Text bold color="blue">📁 Sessions</Text>
+      <Newline />
+      <Text>  Total Sessions: <Text color="cyan">{stats.sessions}</Text></Text>
+      <Newline />
+      <Text>  Total Messages: <Text color="cyan">{stats.messages}</Text></Text>
+      <Newline />
+      <Text dimColor>  Use 'echo sessions' to view details</Text>
+    </Box>
+  );
+
+  const renderBrain = () => (
+    <Box borderStyle="round" borderColor="yellow" padding={1} flexDirection="column">
+      <Text bold color="yellow">🧠 Second Brain</Text>
+      <Newline />
+      <Text>  Total Memories: <Text color="cyan">{stats.memories}</Text></Text>
+      <Newline />
+      <Text dimColor>  Use 'echo brain' commands to manage knowledge</Text>
+    </Box>
+  );
+
+  const renderApprovals = () => (
+    <Box borderStyle="round" borderColor={stats.pendingApprovals > 0 ? 'yellow' : 'green'} padding={1} flexDirection="column">
+      <Text bold color={stats.pendingApprovals > 0 ? 'yellow' : 'green'}>
+        🔐 HITL Approvals
+      </Text>
+      <Newline />
+      {stats.pendingApprovals > 0 ? (
+        <>
+          <Text color="yellow">⚠ {stats.pendingApprovals} pending approval(s)</Text>
+          <Newline />
+          <Text dimColor>  Use 'echo approve list' to view</Text>
+        </>
+      ) : (
+        <Text color="green">✓ No pending approvals</Text>
+      )}
+    </Box>
+  );
+
+  const renderContent = () => {
+    switch (selectedTab) {
+      case 0:
+        return renderOverview();
+      case 1:
+        return renderProviders();
+      case 2:
+        return renderSessions();
+      case 3:
+        return renderBrain();
+      case 4:
+        return renderApprovals();
+      default:
+        return renderOverview();
+    }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString();
-  };
+  if (exitRequested) {
+    return <Text color="green">Goodbye!</Text>;
+  }
 
   return (
     <Box flexDirection="column">
-      {/* Header */}
-      <Box marginBottom={1}>
-        <Text bold color="cyan">
-          ╔═══════════════════════════════════════════════════════════╗
-        </Text>
-      </Box>
-      
-      <Box marginBottom={1}>
-        <Text bold color="cyan">
-          ║
-        </Text>
-        <Text bold color="white">
-          {' '}ECHO DASHBOARD - The Resilient Agentic Terminal{' '}
-        </Text>
-        <Text bold color="cyan">
-          ║
-        </Text>
-      </Box>
-
-      <Box marginBottom={1}>
-        <Text bold color="cyan">
-          ╚═══════════════════════════════════════════════════════════╝
-        </Text>
-      </Box>
-
-      {/* Time & Status */}
-      <Box marginBottom={1} flexDirection="column">
-        <Box>
-          <Text color="gray">Time: </Text>
-          <Text color="white">{formatTime(currentTime)}</Text>
-          <Text color="gray">  |  </Text>
-          <Text color="white">{formatDate(currentTime)}</Text>
-        </Box>
-        <Box>
-          <Text color="gray">Status: </Text>
-          <Text color="green">● Online</Text>
-          <Text color="gray">  |  </Text>
-          <Text color="yellow">
-            <Spinner type="dots" />
-          </Text>
-          <Text color="gray"> Listening for commands</Text>
-        </Box>
-      </Box>
-
-      {/* Provider Status */}
-      <Box marginBottom={1} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text bold color="cyan">Provider Status</Text>
-        <Box marginTop={1} flexDirection="column">
-          {providers.map((provider, index) => (
-            <Box key={provider.name}>
-              <Text color={provider.configured ? 'green' : 'gray'}>
-                {provider.configured ? '●' : '○'} {provider.name}
-              </Text>
-              {index < providers.length - 1 && <Text color="gray">  |  </Text>}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      {/* Stats */}
-      <Box marginBottom={1} flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1}>
-        <Text bold color="magenta">Statistics</Text>
-        <Box marginTop={1}>
-          <Box marginRight={3}>
-            <Text color="gray">Sessions: </Text>
-            <Text color="white">{sessions}</Text>
-          </Box>
-          <Box marginRight={3}>
-            <Text color="gray">Tokens Used: </Text>
-            <Text color="white">{tokens.toLocaleString()}</Text>
-          </Box>
-          <Box>
-            <Text color="gray">Last Activity: </Text>
-            <Text color="white">{lastActivity}</Text>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Quick Commands */}
-      <Box marginBottom={1} flexDirection="column" borderStyle="round" borderColor="green" paddingX={1}>
-        <Text bold color="green">Quick Commands</Text>
-        <Box marginTop={1} flexDirection="column">
-          <Text color="white">  echo chat "message"     - Start a conversation</Text>
-          <Text color="white">  echo chat --agent       - Agent mode with tools</Text>
-          <Text color="white">  echo plugin sync-all    - Sync plugins</Text>
-          <Text color="white">  echo auth sync          - Auto-detect credentials</Text>
-          <Text color="white">  q                       - Quit dashboard</Text>
-        </Box>
-      </Box>
-
-      {/* Footer */}
-      <Box>
-        <Text color="gray">
-          Press 'q' to quit • Press Ctrl+C to force exit
-        </Text>
-      </Box>
+      {renderHeader()}
+      {renderTabs()}
+      {renderContent()}
+      <Newline />
+      <Text dimColor>Press Tab to switch tabs | Q to exit</Text>
     </Box>
   );
 };
 
-export default Dashboard;
+/**
+ * Launch the interactive dashboard
+ */
+export async function launchDashboard(): Promise<void> {
+  const { waitUntilExit } = render(<Dashboard />);
+  await waitUntilExit();
+}

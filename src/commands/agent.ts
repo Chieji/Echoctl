@@ -5,6 +5,7 @@
 import chalk from 'chalk';
 import { getConfig } from '../utils/config.js';
 import { getMemory } from '../utils/memory.js';
+import { getSessionStore } from '../storage/sessions.js';
 import { ProviderChain } from '../providers/chain.js';
 import { getStateManager } from '../state/manager.js';
 
@@ -31,31 +32,31 @@ export async function agentRun(task: string, options: {
  */
 export async function agentHealth(): Promise<void> {
   const config = getConfig();
-  const memory = getMemory();
+  const sessionStore = getSessionStore();
   const stateManager = getStateManager();
-  
-  await memory.init();
+
+  await sessionStore.init();
   await stateManager.init();
-  
+
   const providers = config.getConfiguredProviders();
-  const stats = await memory.getStats();
+  const stats = await sessionStore.getStats();
   const health = await stateManager.getHealth();
   const state = stateManager.getState();
   const paths = stateManager.getPaths();
-  
+
   console.log(chalk.bold('\n🏥 Agent Health Status\n'));
-  
+
   // System health
   console.log(chalk.bold('System Health:'));
-  const healthIcon = health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok' 
-    ? chalk.green('✓') 
+  const healthIcon = health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok'
+    ? chalk.green('✓')
     : chalk.red('✗');
   console.log(`  ${healthIcon} Overall: ${health.message}`);
   console.log(`  ${health.state === 'ok' ? chalk.green('✓') : chalk.red('✗')} State file: ${paths.state}`);
   console.log(`  ${health.ledger === 'ok' ? chalk.green('✓') : chalk.red('✗')} Event ledger: ${paths.ledger}`);
   console.log(`  ${health.directories === 'ok' ? chalk.green('✓') : chalk.red('✗')} Directories`);
   console.log('');
-  
+
   // Agent state
   console.log(chalk.bold('Agent State:'));
   console.log(`  Status: ${chalk.cyan(state.status)}`);
@@ -66,34 +67,35 @@ export async function agentHealth(): Promise<void> {
   console.log(`  Provider: ${state.provider}`);
   console.log(`  YOLO Mode: ${state.yoloMode ? chalk.yellow('ON') : chalk.dim('OFF')}`);
   console.log('');
-  
+
   // Provider health
   console.log(chalk.bold('Providers:'));
   const allProviders = ['gemini', 'openai', 'anthropic', 'qwen', 'groq', 'ollama', 'deepseek', 'kimi', 'openrouter', 'together', 'modelscope', 'mistral', 'huggingface', 'github'];
-  
+
   for (const provider of allProviders) {
     const isConfigured = providers.includes(provider as any);
     const icon = isConfigured ? chalk.green('✓') : chalk.dim('○');
     console.log(`  ${icon} ${provider}`);
   }
-  
+
   console.log('');
-  
+
   // Memory health
   console.log(chalk.bold('Memory:'));
   console.log(`  Sessions: ${stats.totalSessions}`);
   console.log(`  Total Messages: ${stats.totalMessages}`);
+  console.log(`  Total Tokens: ${stats.totalTokens}`);
   console.log(`  Current Session: ${stats.currentSessionMessages}`);
-  console.log(`  Storage: ~/.config/echo-cli/history.json`);
+  console.log(`  Storage: ${sessionStore.getDbPath()}`);
   console.log('');
-  
+
   // System info
   console.log(chalk.bold('System:'));
   console.log(`  Node: ${process.version}`);
   console.log(`  Platform: ${process.platform}`);
   console.log(`  Memory: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`);
   console.log('');
-  
+
   // Overall status
   const isHealthy = health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok';
   console.log(isHealthy ? chalk.green('✓ Agent Healthy') : chalk.red('✗ Agent Issues Detected'));
@@ -136,35 +138,45 @@ export async function agentMemory(options: {
   limit?: number;
   export?: string;
 }): Promise<void> {
-  const memory = getMemory();
-  await memory.init();
-  
+  const sessionStore = getSessionStore();
+  await sessionStore.init();
+
   console.log(chalk.bold('\n🧠 Agent Memory\n'));
-  
-  const stats = await memory.getStats();
-  
+
+  const stats = await sessionStore.getStats();
+
   console.log(chalk.bold('Memory Statistics:'));
   console.log(`  Total Sessions: ${stats.totalSessions}`);
   console.log(`  Total Messages: ${stats.totalMessages}`);
+  console.log(`  Total Tokens: ${stats.totalTokens}`);
   console.log(`  Current Session Messages: ${stats.currentSessionMessages}`);
-  console.log(`  Storage: ~/.config/echo-cli/history.json`);
+  console.log(`  Storage: ${sessionStore.getDbPath()}`);
   console.log('');
-  
+
   // List recent sessions
-  const sessions = await memory.listSessions();
+  const sessions = sessionStore.getAll(options.limit || 10);
   if (sessions.length > 0) {
     console.log(chalk.bold('Recent Sessions:'));
-    sessions.slice(0, options.limit || 10).forEach((session, i) => {
+    sessions.forEach((session, i) => {
       console.log(`  ${i + 1}. ${session.name}`);
       console.log(`     ID: ${session.id}`);
       console.log(`     Messages: ${session.messages.length}`);
+      console.log(`     Tokens: ${session.tokenCount || 0}`);
       console.log(`     Updated: ${new Date(session.updatedAt).toLocaleString()}`);
       console.log('');
     });
   }
-  
+
   if (options.export) {
-    console.log(chalk.dim(`Export to ${options.export} - coming soon\n`));
+    const currentSession = sessionStore.getCurrentSession();
+    if (currentSession) {
+      const exported = sessionStore.export(currentSession.id);
+      const { writeFileSync } = require('fs');
+      writeFileSync(options.export, exported);
+      console.log(chalk.green(`✓ Exported session to ${options.export}\n`));
+    } else {
+      console.log(chalk.yellow('⚠ No current session to export\n'));
+    }
   }
 }
 
@@ -282,23 +294,23 @@ export async function agentConfig(options: {
  */
 export async function agentDoctor(): Promise<void> {
   const config = getConfig();
-  const memory = getMemory();
+  const sessionStore = getSessionStore();
   const stateManager = getStateManager();
-  
-  await memory.init();
+
+  await sessionStore.init();
   await stateManager.init();
-  
+
   console.log(chalk.bold('\n👨\u200d⚕️  Echo Doctor - System Diagnostic\n'));
-  
+
   let allHealthy = true;
-  
+
   // Check configuration
   console.log(chalk.bold('Configuration:'));
   const configPath = config.configPath;
   console.log(`  ${existsSync(configPath) ? chalk.green('✓') : chalk.red('✗')} Config file exists`);
   console.log(`  ${config.getDefaultProvider() ? chalk.green('✓') : chalk.red('✗')} Default provider set`);
   console.log('');
-  
+
   // Check providers
   console.log(chalk.bold('Provider Status:'));
   const providers = [
@@ -308,7 +320,7 @@ export async function agentDoctor(): Promise<void> {
     { name: 'Groq', key: 'groq', env: 'GROQ_API_KEY' },
     { name: 'Qwen', key: 'qwen', env: null },
   ];
-  
+
   for (const provider of providers) {
     const hasKey = config.isProviderConfigured(provider.key as any) || process.env[provider.env!];
     const icon = hasKey ? chalk.green('✓') : chalk.yellow('○');
@@ -316,16 +328,17 @@ export async function agentDoctor(): Promise<void> {
     console.log(`  ${icon} ${provider.name}: ${status}`);
   }
   console.log('');
-  
+
   // Check memory
   console.log(chalk.bold('Memory System:'));
-  const memoryPath = memory.getHistoryPath();
-  console.log(`  ${existsSync(memoryPath) ? chalk.green('✓') : chalk.yellow('○')} History file`);
-  const stats = await memory.getStats();
+  const memoryPath = sessionStore.getDbPath();
+  console.log(`  ${existsSync(memoryPath) ? chalk.green('✓') : chalk.yellow('○')} Sessions file`);
+  const stats = await sessionStore.getStats();
   console.log(`  ${stats.totalSessions >= 0 ? chalk.green('✓') : chalk.red('✗')} Sessions: ${stats.totalSessions}`);
   console.log(`  ${stats.totalMessages >= 0 ? chalk.green('✓') : chalk.red('✗')} Messages: ${stats.totalMessages}`);
+  console.log(`  ${stats.totalTokens >= 0 ? chalk.green('✓') : chalk.red('✗')} Tokens: ${stats.totalTokens}`);
   console.log('');
-  
+
   // Check state
   console.log(chalk.bold('State System:'));
   const paths = stateManager.getPaths();
@@ -335,7 +348,7 @@ export async function agentDoctor(): Promise<void> {
   console.log(`  ${chalk.cyan('Status')}: ${state.status}`);
   console.log(`  ${chalk.cyan('Tasks')}: ${state.totalTasks} total, ${state.completedTasks} completed, ${state.failedTasks} failed`);
   console.log('');
-  
+
   // Check directories
   console.log(chalk.bold('Directories:'));
   const dirs = [paths.data, paths.docs, paths.logs];
@@ -343,13 +356,13 @@ export async function agentDoctor(): Promise<void> {
     console.log(`  ${existsSync(dir) ? chalk.green('✓') : chalk.red('✗')} ${dir}`);
   }
   console.log('');
-  
+
   // Overall health
   const health = await stateManager.getHealth();
   console.log(chalk.bold('Overall Health:'));
   console.log(`  ${health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok' ? chalk.green('✓ All systems operational') : chalk.red('✗ Issues detected')}`);
   console.log('');
-  
+
   if (!allHealthy) {
     console.log(chalk.yellow('Recommendation: Run ') + chalk.cyan('echo auth login') + chalk.yellow(' to configure providers\n'));
   }

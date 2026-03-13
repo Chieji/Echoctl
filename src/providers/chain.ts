@@ -20,18 +20,26 @@ export class ProviderChain {
   ) {
     this.providers = new Map();
     this.onFailover = onFailover;
-    
-    // Initialize providers with their configs
-    const providerNames: ProviderName[] = ['openai', 'gemini', 'anthropic'];
+
+    // Initialize all 14 providers with their configs
+    const providerNames: ProviderName[] = [
+      'openai', 'gemini', 'anthropic', 'qwen', 'ollama', 'deepseek', 
+      'kimi', 'groq', 'openrouter', 'together', 'modelscope', 'mistral', 
+      'huggingface', 'github'
+    ];
     for (const name of providerNames) {
       const config = configs[name];
-      if (config?.apiKey) {
+      if (config?.apiKey || name === 'ollama') { // Ollama doesn't need API key
         this.providers.set(name, createProvider(name, config));
       }
     }
 
-    // Use provided priority order or default to: gemini -> openai -> anthropic
-    this.priorityOrder = priorityOrder || ['gemini', 'openai', 'anthropic'];
+    // Use provided priority order or default comprehensive failover chain
+    this.priorityOrder = priorityOrder || [
+      'gemini', 'openai', 'anthropic', 'groq', 'mistral', 'deepseek', 
+      'kimi', 'openrouter', 'together', 'qwen', 'modelscope', 'github', 
+      'huggingface', 'ollama'
+    ];
   }
 
   /**

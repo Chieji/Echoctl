@@ -8,6 +8,7 @@ import Table from 'cli-table3';
 import gradient from 'gradient-string';
 import { getConfig } from '../utils/config.js';
 import { getMemory } from '../utils/memory.js';
+import { getSessionStore } from '../storage/sessions.js';
 import { ProviderChain, createDefaultChain } from '../providers/chain.js';
 import { selectProviderForTask, getProviderSelectionReason } from '../utils/smart-mode.js';
 import { ProviderName, Message } from '../types/index.js';
@@ -98,13 +99,15 @@ export async function chat(message: string, options: {
 }): Promise<void> {
   const config = getConfig();
   const memory = getMemory();
+  const sessionStore = getSessionStore();
 
-  // Initialize memory
+  // Initialize storage
   await memory.init();
+  await sessionStore.init();
 
   // Check if any providers are configured
   const configuredProviders = config.getConfiguredProviders();
-  
+
   if (configuredProviders.length === 0) {
     console.log(chalk.yellow('⚠ No AI providers configured.'));
     console.log(chalk.dim('Run ') + chalk.cyan('echo auth login') + chalk.dim(' to set up your first provider.\n'));
@@ -118,7 +121,7 @@ export async function chat(message: string, options: {
   if (options.provider) {
     providerToUse = options.provider;
     isSmartMode = false;
-    
+
     if (!config.isProviderConfigured(providerToUse)) {
       console.log(chalk.red(`✗ ${providerToUse.toUpperCase()} is not configured.`));
       console.log(chalk.dim('Run ') + chalk.cyan('echo auth login') + chalk.dim(' to configure it.\n'));
@@ -135,11 +138,14 @@ export async function chat(message: string, options: {
 
   // Switch session if specified
   if (options.session) {
-    const session = await memory.switchSession(options.session);
-    if (!session) {
+    const success = await sessionStore.setCurrentSession(options.session);
+    if (!success) {
       console.log(chalk.red(`✗ Session not found: ${options.session}`));
       process.exit(1);
     }
+    const session = sessionStore.getCurrentSession();
+    console.log(chalk.dim('📁 Session: ') + chalk.cyan(session?.name || 'Unknown'));
+    console.log('');
   }
 
   // Load ECHO.md context
@@ -215,8 +221,17 @@ async function runStandardChat(
   options: { raw?: boolean },
   echoContext: any
 ): Promise<void> {
+  const sessionStore = getSessionStore();
+  await sessionStore.init();
+
+  // Get or create current session
+  let session = sessionStore.getCurrentSession();
+  if (!session) {
+    session = await sessionStore.create('New Session', provider);
+  }
+
   const contextLength = config.getContextLength();
-  const history = await memory.getContext(contextLength);
+  const history = session.messages.slice(-(contextLength || 10));
 
   // Build system prompt with ECHO.md context
   let systemPrompt = 'You are Echo, a helpful AI assistant.';
@@ -229,16 +244,25 @@ async function runStandardChat(
     ...history,
   ];
 
-  // Add user message
-  await memory.addMessage('user', message);
+  // Add user message to session storage
+  await sessionStore.addMessage(session.id, 'user', message);
 
   const spinner = ora({ text: chalk.dim('Thinking...'), spinner: 'dots' }).start();
 
   try {
-    const result = await chain.generateWithFailover(messagesWithSystem, undefined, provider);
+    // Get updated messages including the one we just added
+    const currentSession = sessionStore.get(session.id);
+    const updatedHistory = currentSession!.messages.slice(-(contextLength || 10));
+    const updatedMessages = [
+      { role: 'system' as const, content: systemPrompt, timestamp: Date.now() },
+      ...updatedHistory,
+    ];
+
+    const result = await chain.generateWithFailover(updatedMessages, undefined, provider);
     spinner.stop();
 
-    await memory.addMessage('assistant', result.response.content);
+    // Save assistant response to session storage
+    await sessionStore.addMessage(session.id, 'assistant', result.response.content);
 
     if (!options.raw) {
       displayResponse(result.response.content, result.provider, result.response.usage);
@@ -268,11 +292,11 @@ export async function continueChat(message: string): Promise<void> {
  * Start a new session
  */
 export async function newSession(name?: string): Promise<void> {
-  const memory = getMemory();
-  await memory.init();
+  const sessionStore = getSessionStore();
+  await sessionStore.init();
 
-  const session = await memory.createSession(name);
-  
+  const session = await sessionStore.create(name || 'New Session');
+
   console.log(chalk.green('✓ New session started'));
   console.log(chalk.dim(`  ID: ${session.id}`));
   console.log(chalk.dim(`  Name: ${session.name}`));
@@ -286,27 +310,32 @@ export async function newSession(name?: string): Promise<void> {
  * List sessions
  */
 export async function listSessions(): Promise<void> {
-  const memory = getMemory();
-  await memory.init();
+  const sessionStore = getSessionStore();
+  await sessionStore.init();
 
-  const sessions = await memory.listSessions();
+  const sessions = sessionStore.getAll(10);
 
   if (sessions.length === 0) {
     console.log(chalk.yellow('⚠ No sessions found. Start one with: ') + chalk.cyan('echo chat "Hello"') + '\n');
     return;
   }
 
+  const currentSession = sessionStore.getCurrentSession();
+
   const table = new Table({
-    head: [chalk.cyan('ID'), chalk.cyan('Name'), chalk.cyan('Messages'), chalk.cyan('Last Activity')],
-    colWidths: [10, 30, 12, 25],
+    head: [chalk.cyan('ID'), chalk.cyan('Name'), chalk.cyan('Messages'), chalk.cyan('Tokens'), chalk.cyan('Last Activity'), chalk.cyan('Active')],
+    colWidths: [10, 25, 10, 10, 20, 8],
   });
 
-  for (const session of sessions.slice(0, 10)) {
+  for (const session of sessions) {
+    const isActive = currentSession && session.id === currentSession.id ? chalk.green('✓') : '';
     table.push([
       session.id.substring(0, 8) + '...',
-      session.name.substring(0, 28),
+      session.name.substring(0, 23),
       session.messages.length.toString(),
+      (session.tokenCount || 0).toString(),
       new Date(session.updatedAt).toLocaleString(),
+      isActive,
     ]);
   }
 
@@ -320,10 +349,10 @@ export async function listSessions(): Promise<void> {
  * Show session stats
  */
 export async function showStats(): Promise<void> {
-  const memory = getMemory();
-  await memory.init();
+  const sessionStore = getSessionStore();
+  await sessionStore.init();
 
-  const stats = await memory.getStats();
+  const stats = await sessionStore.getStats();
   const config = getConfig();
 
   console.log('\n' + gradient.pastel('╔════════════════════════════════════════╗'));
@@ -337,6 +366,7 @@ export async function showStats(): Promise<void> {
   table.push(
     [chalk.cyan('Total Sessions'), stats.totalSessions.toString()],
     [chalk.cyan('Total Messages'), stats.totalMessages.toString()],
+    [chalk.cyan('Total Tokens'), stats.totalTokens.toString()],
     [chalk.cyan('Current Session'), stats.currentSessionMessages.toString()],
     [chalk.cyan('Default Provider'), config.getDefaultProvider().toUpperCase()],
     [chalk.cyan('Smart Mode'), config.isSmartModeEnabled() ? chalk.green('On') : chalk.yellow('Off')],
@@ -344,7 +374,7 @@ export async function showStats(): Promise<void> {
 
   console.log(table.toString());
   console.log('');
-  console.log(chalk.dim(`History file: ${memory.getHistoryPath()}`) + '\n');
+  console.log(chalk.dim(`Storage: ${sessionStore.getDbPath()}`) + '\n');
 }
 
 /**

@@ -31,6 +31,15 @@ export interface Session {
   createdAt: number;
   updatedAt: number;
   provider: ProviderName;
+  tokenCount?: number;
+}
+
+/**
+ * Database structure for session storage
+ */
+export interface SessionDatabase {
+  sessions: Session[];
+  currentSessionId: string | null;
 }
 
 /**
@@ -100,16 +109,23 @@ export interface AppConfig {
     openai?: ProviderConfig;
     gemini?: ProviderConfig;
     anthropic?: ProviderConfig;
+    qwen?: ProviderConfig;
+    ollama?: ProviderConfig;
+    deepseek?: ProviderConfig;
+    kimi?: ProviderConfig;
+    groq?: ProviderConfig;
+    openrouter?: ProviderConfig;
+    together?: ProviderConfig;
+    modelscope?: ProviderConfig;
+    mistral?: ProviderConfig;
+    huggingface?: ProviderConfig;
+    github?: ProviderConfig;
   };
   defaultProvider: ProviderName;
   smartModeEnabled: boolean;
   contextLength: number;
 }
 
-/**
- * Database structure for lowdb
- */
-export interface Database {
-  sessions: Session[];
-  currentSessionId: string | null;
-}
+// Note: SessionDatabase is now the primary database interface (see above)
+// Database interface kept for backward compatibility with memory.ts
+export type Database = SessionDatabase;

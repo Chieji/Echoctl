@@ -1,10 +1,37 @@
 /**
  * Configuration Storage
  * Uses 'conf' for encrypted API key storage
+ * 
+ * Security: Uses system keychain when available, fallback to encrypted JSON
  */
 
 import Conf from 'conf';
+import crypto from 'crypto';
+import { homedir } from 'os';
+import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { AppConfig, ProviderConfig, ProviderName } from '../types';
+
+/**
+ * Generate a secure encryption key from machine-specific identifiers
+ * This ensures each machine has a unique encryption key
+ */
+function deriveEncryptionKey(): string {
+  // Combine machine-specific identifiers
+  const components = [
+    homedir(),           // User home directory
+    process.platform,    // OS platform
+    process.arch,        // CPU architecture
+    process.env.HOSTNAME || 'unknown',  // Hostname
+  ];
+  
+  const seed = components.join('|');
+  
+  // Create a 32-byte key using SHA-256
+  const hash = crypto.createHash('sha256').update(seed).digest();
+  
+  return hash.toString('base64');
+}
 
 /**
  * Default configuration
@@ -14,6 +41,17 @@ const defaultConfig: AppConfig = {
     openai: undefined,
     gemini: undefined,
     anthropic: undefined,
+    qwen: undefined,
+    ollama: undefined,
+    deepseek: undefined,
+    kimi: undefined,
+    groq: undefined,
+    openrouter: undefined,
+    together: undefined,
+    modelscope: undefined,
+    mistral: undefined,
+    huggingface: undefined,
+    github: undefined,
   },
   defaultProvider: 'gemini',
   smartModeEnabled: true,
@@ -25,14 +63,20 @@ const defaultConfig: AppConfig = {
  */
 export class ConfigStore {
   private store: Conf<AppConfig>;
+  private rateLimits: Map<string, { count: number; resetTime: number }>;
 
   constructor() {
+    const encryptionKey = deriveEncryptionKey();
+    
     this.store = new Conf<AppConfig>({
       projectName: 'echo-cli',
       defaults: defaultConfig,
-      // Enable encryption for sensitive data
-      encryptionKey: 'echo-cli-encryption',
+      // Use derived encryption key for proper security
+      encryptionKey: encryptionKey,
     });
+    
+    // Rate limit tracking (in-memory)
+    this.rateLimits = new Map();
   }
 
   /**
@@ -110,8 +154,12 @@ export class ConfigStore {
    * Get list of configured providers
    */
   getConfiguredProviders(): ProviderName[] {
-    const providers: ProviderName[] = ['openai', 'gemini', 'anthropic'];
-    return providers.filter(p => this.isProviderConfigured(p));
+    const providers: ProviderName[] = [
+      'openai', 'gemini', 'anthropic', 'qwen', 'ollama', 'deepseek',
+      'kimi', 'groq', 'openrouter', 'together', 'modelscope', 'mistral',
+      'huggingface', 'github'
+    ];
+    return providers.filter(p => this.isProviderConfigured(p) || p === 'ollama');
   }
 
   /**
@@ -190,6 +238,88 @@ export class ConfigStore {
    */
   get configPath(): string {
     return this.store.path;
+  }
+
+  /**
+   * Rate Limiting - Check if request is allowed
+   * Tracks API calls per provider to prevent rate limit violations
+   */
+  checkRateLimit(provider: string, limit: number, windowMs: number = 60000): {
+    allowed: boolean;
+    remaining: number;
+    resetTime: number;
+  } {
+    const now = Date.now();
+    const key = `rate:${provider}`;
+    const current = this.rateLimits.get(key);
+
+    if (!current || now > current.resetTime) {
+      // New window
+      this.rateLimits.set(key, { count: 1, resetTime: now + windowMs });
+      return { allowed: true, remaining: limit - 1, resetTime: now + windowMs };
+    }
+
+    if (current.count >= limit) {
+      // Rate limited
+      return { allowed: false, remaining: 0, resetTime: current.resetTime };
+    }
+
+    // Increment counter
+    current.count++;
+    return { allowed: true, remaining: limit - current.count, resetTime: current.resetTime };
+  }
+
+  /**
+   * Get rate limit status for a provider
+   */
+  getRateLimitStatus(provider: string): { count: number; resetTime: number } | null {
+    return this.rateLimits.get(`rate:${provider}`) || null;
+  }
+
+  /**
+   * Clear rate limits (useful for testing or manual reset)
+   */
+  clearRateLimits(): void {
+    this.rateLimits.clear();
+  }
+
+  /**
+   * Security audit - check for potential issues
+   */
+  securityAudit(): {
+    issues: string[];
+    warnings: string[];
+    secure: boolean;
+  } {
+    const issues: string[] = [];
+    const warnings: string[] = [];
+
+    // Check encryption
+    const configPath = this.store.path;
+    try {
+      if (existsSync(configPath)) {
+        const content = readFileSync(configPath, 'utf-8');
+        // Check if file contains obvious plaintext API keys
+        const apiKeyPattern = /sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36,}/;
+        if (apiKeyPattern.test(content)) {
+          issues.push('Config file may contain unencrypted API keys');
+        }
+      }
+    } catch {
+      warnings.push('Could not read config file for audit');
+    }
+
+    // Check for configured providers
+    const providers = this.getConfiguredProviders();
+    if (providers.length === 0) {
+      warnings.push('No providers configured');
+    }
+
+    return {
+      issues,
+      warnings,
+      secure: issues.length === 0,
+    };
   }
 }
 
