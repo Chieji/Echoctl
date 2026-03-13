@@ -1,49 +1,65 @@
-# Source files
-src/
-tests/
-*.ts
-*.tsx
-!dist/
-
-# Development
-.git/
-.github/
-.gitignore
-.npmrc
-
-# Documentation
-*.md
-!README.md
-!LICENSE
-
-# Build artifacts
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-*.log
+
+# Source files (we publish compiled JS only)
+src/
+
+# Tests
+tests/
+*.test.ts
+coverage/
+
+# Config files not needed at runtime
+tsconfig.json
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Development files
+.env
+.env.local
+.env.*.local
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
+*~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Config files not needed in package
-tsconfig.json
+# Logs
+*.log
+npm-debug.log*
+
+# Documentation (keep README, LICENSE)
+*.md
+!README.md
+!LICENSE
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+DEPLOYMENT.md
+PLUGINS.md
+TOOLS.md
+SOUL.md
+AGENTS.md
+ECHO.md.template
+PROVIDER_IMPLEMENTATION_SUMMARY.md
+
+# Build scripts
 build.sh
-echoctl.sh
 
-# Python files (from earlier echoctl version)
-echoctl/
-*.py
-pyproject.toml
+# Git
+.git/
+.gitignore
+.gitattributes
 
-# Test coverage
-coverage/
-
-# Temporary files
-tmp/
-temp/
+# Qwen
+.qwen/
