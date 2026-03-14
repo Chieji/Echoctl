@@ -19,13 +19,15 @@ A resilient, multi-provider AI CLI tool with ReAct agent capabilities, automatic
 | **BDI Engine** | Cognitive reasoning layer (Belief-Desire-Intention) for smarter goal planning |
 | **Box.com Sync** | "Generous Memory" - Automatically sync your agent's brain to the cloud |
 | **MCP Auto-Sync** | "The Master Thief" - Instantly harvest MCP tools from Claude and Cursor |
+| **GitHub Collab** | Create PRs, Manage Issues, and Search Repos directly from chat |
+| **Echo Doctor** | Interactive diagnostic & self-healing system ("The Fixer") |
 | **ReAct Agent** | Reason → Act → Observe loop for autonomous task completion |
 | **Second Brain** | Persistent knowledge base with tags and search |
 | **HITL Approvals** | Human-in-the-loop for dangerous operations |
 | **Track Isolation** | Separate contexts for different projects |
 | **Interactive TUI** | Premium dashboard with live File Tree and boot animations |
 | **Smart Mode** | Auto-selects best provider based on task type |
-| **Security First** | Encrypted config, Plan Mode (Read-only), and dangerous command blocking |
+| **Security First** | Encrypted config, Plan Mode (Read-only), and self-healing storage |
 
 ### 🧠 ReAct Agent Mode
 
@@ -43,6 +45,13 @@ Echo uses Box.com to store its "Master Memory". It learns from your daily intera
 ```bash
 echo auth box # Setup cloud memory sync
 ```
+
+### 🐙 GitHub Collaboration
+Echo can now interact with your GitHub repositories.
+```bash
+echo auth github # Setup GitHub Personal Access Token
+```
+Available tools: `githubCreatePullRequest`, `githubCreateIssue`, `githubSearchRepos`.
 
 ---
 
@@ -73,6 +82,9 @@ echo auth sync
 
 # Or interactive setup
 echo auth login
+
+# Configure GitHub
+echo auth github
 
 # View status
 echo auth status
@@ -126,6 +138,9 @@ echo chat "Get latest tech news" --agent
 
 # YOLO mode - No confirmation prompts
 echo chat "Create a new file called test.js with console.log('hello')" --agent --yolo
+
+# Run diagnostic
+echo agent doctor
 ```
 
 **Available Tools:**

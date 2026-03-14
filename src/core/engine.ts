@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, ToolName } from '../tools/executor.js';
+import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, githubTools, ToolName } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -19,6 +19,7 @@ const toolRegistry = {
   ...multiFileTools,
   ...lspTools,
   ...browserTools,
+  ...githubTools,
 };
 
 // Get all tool names for system prompt
@@ -133,7 +134,11 @@ Available tools (use EXACT names below):\n`;
 - type(selector, text): Type text into an input field
 - extract(selector?): Extract text from the page
 - getLinks(): Get all links from the page
-- searchGoogle(query): Search Google for a query\n`;
+- searchGoogle(query): Search Google for a query
+- githubCreatePullRequest(owner, repo, title, head, base?, body?): Create a GitHub PR
+- githubCreateIssue(owner, repo, title, body?, labels?): Create a GitHub issue
+- githubSearchRepos(query): Search for GitHub repositories
+- githubGetUser(): Get information about the linked GitHub user\n`;
   }
 
   basePrompt += `
@@ -488,6 +493,33 @@ export class ReActEngine {
       
       if (tool === 'extract' || tool === 'getLinks') {
         return { success: true, output: (result as any).content || result };
+      }
+      
+      // Format GitHub results
+      if (tool === 'githubCreatePullRequest' || tool === 'githubCreateIssue') {
+        const ghResult = result as any;
+        return {
+          success: ghResult.success,
+          output: ghResult.success 
+            ? `Successfully created! URL: ${ghResult.url}`
+            : `Failed: ${ghResult.error}`
+        };
+      }
+      
+      if (tool === 'githubSearchRepos') {
+        const repos = result as any[];
+        return {
+          success: true,
+          output: repos.map((r: any) => `- ${r.full_name} (${r.stars} stars): ${r.description || 'No description'}\n  URL: ${r.url}`).join('\n')
+        };
+      }
+      
+      if (tool === 'githubGetUser') {
+        const user = result as any;
+        return {
+          success: true,
+          output: `User: @${user.login} (${user.name || 'No name'})\nBio: ${user.bio || 'No bio'}\nPublic Repos: ${user.public_repos}`
+        };
       }
       
       return result as { success: boolean; output: string };

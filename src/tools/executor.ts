@@ -299,9 +299,17 @@ export const tools = {
   executeNode,
 };
 
-
-// Re-export git, web, and multi-file tools
-export * from './git.js';
+// Re-export tools explicitly to avoid collisions
+export { githubTools } from './github.js';
+export {
+  getGitStatus,
+  gitAdd,
+  gitAddAll,
+  gitCommit,
+  gitPush,
+  gitLog,
+  createPullRequest as gitCreatePullRequest,
+} from './git.js';
 export * from './web.js';
 export * from './multi-file.js';
 
@@ -338,6 +346,7 @@ export const multiFileTools = {
 // Add LSP tools for code intelligence
 import { findSymbolReferences, renameSymbol, findSymbolDefinition, detectProjectLanguage } from '../lsp/integration.js';
 import { browserNavigate, browserScreenshot, browserClick, browserType, browserExtract, browserGetLinks, browserSearchGoogle } from './browser.js';
+import { githubTools } from './github.js';
 
 export const lspTools = {
   findSymbolReferences,
@@ -362,4 +371,5 @@ export type ToolName =
   | keyof typeof gitTools 
   | keyof typeof multiFileTools 
   | keyof typeof lspTools 
-  | keyof typeof browserTools;
+  | keyof typeof browserTools
+  | keyof typeof githubTools;

@@ -123,6 +123,18 @@ function createCLI(): Command {
     });
 
   auth
+    .command('github')
+    .description('Configure GitHub collaboration (PAT)')
+    .action(async () => {
+      try {
+        await authCommand.github();
+      } catch (error) {
+        console.log(chalk.red('✗ GitHub setup failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  auth
     .command('logout [provider]')
     .description('Remove API key for a provider')
     .action(async (provider?: ProviderName) => {

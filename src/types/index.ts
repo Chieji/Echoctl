@@ -118,6 +118,15 @@ export interface BoxConfig {
 }
 
 /**
+ * GitHub configuration for collaboration
+ */
+export interface GithubConfig {
+  token?: string;
+  username?: string;
+  enabled: boolean;
+}
+
+/**
  * Configuration storage structure
  */
 export interface AppConfig {
@@ -138,6 +147,7 @@ export interface AppConfig {
     github?: ProviderConfig;
   };
   box?: BoxConfig;
+  github?: GithubConfig;
   defaultProvider: ProviderName;
   smartModeEnabled: boolean;
   contextLength: number;

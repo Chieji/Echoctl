@@ -35,7 +35,8 @@ export class BDIEngine {
         'FileSystem Access',
         'Web Research',
         'Multi-Provider Failover',
-        'Cloud-Synced Memory (Box.com)'
+        'Cloud-Synced Memory (Box.com)',
+        'GitHub Collaboration (Issues/PRs)'
       ],
       context: ''
     };

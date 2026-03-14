@@ -9,6 +9,9 @@ import { getSessionStore } from '../storage/sessions.js';
 import { ProviderChain } from '../providers/chain.js';
 import { getStateManager } from '../state/manager.js';
 import { BDIEngine } from '../core/bdi.js';
+import Enquirer from 'enquirer';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * Run agent mode with a task
@@ -304,90 +307,139 @@ export async function agentConfig(options: {
 }
 
 /**
- * Doctor command - diagnose all systems
+ * Doctor command - diagnose all systems and offer fixes
  */
 export async function agentDoctor(): Promise<void> {
   const config = getConfig();
   const sessionStore = getSessionStore();
   const stateManager = getStateManager();
+  const enquirer = new Enquirer();
 
   await sessionStore.init();
   await stateManager.init();
 
-  console.log(chalk.bold('\n👨\u200d⚕️  Echo Doctor - System Diagnostic\n'));
+  console.log(chalk.bold('\n👨‍⚕️  Echo Doctor - System Diagnostic\n'));
 
-  let allHealthy = true;
+  const issues: Array<{ name: string; description: string; fix: () => Promise<void> }> = [];
 
-  // Check configuration
-  console.log(chalk.bold('Configuration:'));
+  // --- Diagnostic Checks ---
+
+  // 1. Check Configuration
   const configPath = config.configPath;
-  console.log(`  ${existsSync(configPath) ? chalk.green('✓') : chalk.red('✗')} Config file exists`);
-  console.log(`  ${config.getDefaultProvider() ? chalk.green('✓') : chalk.red('✗')} Default provider set`);
-  console.log('');
-
-  // Check providers
-  console.log(chalk.bold('Provider Status:'));
-  const providers = [
-    { name: 'Gemini', key: 'gemini', env: 'GEMINI_API_KEY' },
-    { name: 'OpenAI', key: 'openai', env: 'OPENAI_API_KEY' },
-    { name: 'Anthropic', key: 'anthropic', env: 'ANTHROPIC_API_KEY' },
-    { name: 'Groq', key: 'groq', env: 'GROQ_API_KEY' },
-    { name: 'Qwen', key: 'qwen', env: null },
-  ];
-
-  for (const provider of providers) {
-    const hasKey = config.isProviderConfigured(provider.key as any) || process.env[provider.env!];
-    const icon = hasKey ? chalk.green('✓') : chalk.yellow('○');
-    const status = hasKey ? 'Configured' : `Set ${provider.env} or run: echo auth login`;
-    console.log(`  ${icon} ${provider.name}: ${status}`);
+  if (!existsSyncLocal(configPath)) {
+    issues.push({
+      name: 'Missing Config',
+      description: 'Configuration file does not exist.',
+      fix: async () => {
+        config.reset();
+        console.log(chalk.green('✓ Created default configuration.'));
+      }
+    });
   }
-  console.log('');
 
-  // Check memory
-  console.log(chalk.bold('Memory System:'));
-  const memoryPath = sessionStore.getDbPath();
-  console.log(`  ${existsSync(memoryPath) ? chalk.green('✓') : chalk.yellow('○')} Sessions file`);
-  const stats = await sessionStore.getStats();
-  console.log(`  ${stats.totalSessions >= 0 ? chalk.green('✓') : chalk.red('✗')} Sessions: ${stats.totalSessions}`);
-  console.log(`  ${stats.totalMessages >= 0 ? chalk.green('✓') : chalk.red('✗')} Messages: ${stats.totalMessages}`);
-  console.log(`  ${stats.totalTokens >= 0 ? chalk.green('✓') : chalk.red('✗')} Tokens: ${stats.totalTokens}`);
-  console.log('');
+  // 2. Check Providers
+  const providers = config.getConfiguredProviders();
+  if (providers.length === 0) {
+    issues.push({
+      name: 'No Providers',
+      description: 'No AI providers are configured. Echo cannot chat.',
+      fix: async () => {
+        const { authLogin } = await import('./auth.js');
+        await authLogin();
+      }
+    });
+  }
 
-  // Check state
-  console.log(chalk.bold('State System:'));
+  // 3. Check Directories
   const paths = stateManager.getPaths();
-  console.log(`  ${existsSync(paths.state) ? chalk.green('✓') : chalk.yellow('○')} State file`);
-  console.log(`  ${existsSync(paths.ledger) ? chalk.green('✓') : chalk.yellow('○')} Event ledger`);
-  const state = stateManager.getState();
-  console.log(`  ${chalk.cyan('Status')}: ${state.status}`);
-  console.log(`  ${chalk.cyan('Tasks')}: ${state.totalTasks} total, ${state.completedTasks} completed, ${state.failedTasks} failed`);
-  console.log('');
-
-  // Check directories
-  console.log(chalk.bold('Directories:'));
   const dirs = [paths.data, paths.docs, paths.logs];
   for (const dir of dirs) {
-    console.log(`  ${existsSync(dir) ? chalk.green('✓') : chalk.red('✗')} ${dir}`);
+    if (!existsSyncLocal(dir)) {
+      issues.push({
+        name: `Missing Directory: ${dir.split('/').pop()}`,
+        description: `Required directory ${dir} is missing.`,
+        fix: async () => {
+          mkdirSync(dir, { recursive: true });
+          console.log(chalk.green(`✓ Created directory: ${dir}`));
+        }
+      });
+    }
   }
-  console.log('');
 
-  // Overall health
-  const health = await stateManager.getHealth();
-  console.log(chalk.bold('Overall Health:'));
-  console.log(`  ${health.state === 'ok' && health.ledger === 'ok' && health.directories === 'ok' ? chalk.green('✓ All systems operational') : chalk.red('✗ Issues detected')}`);
-  console.log('');
+  // 4. Check GitHub
+  const githubConfig = config.getGithubConfig();
+  if (githubConfig?.enabled && !githubConfig.token) {
+    issues.push({
+      name: 'GitHub Config Incomplete',
+      description: 'GitHub is enabled but no Personal Access Token is set.',
+      fix: async () => {
+        const { authGithub } = await import('./auth.js');
+        await authGithub();
+      }
+    });
+  }
 
-  if (!allHealthy) {
-    console.log(chalk.yellow('Recommendation: Run ') + chalk.cyan('echo auth login') + chalk.yellow(' to configure providers\n'));
+  // 5. Check Box.com
+  const boxConfig = config.getBoxConfig();
+  if (boxConfig?.enabled && !boxConfig.developerToken) {
+    issues.push({
+      name: 'Box Config Incomplete',
+      description: 'Box.com sync is enabled but no developer token is set.',
+      fix: async () => {
+        const { authBox } = await import('./auth.js');
+        await authBox();
+      }
+    });
+  }
+
+  // --- Display Report ---
+  
+  if (issues.length === 0) {
+    console.log(chalk.green('✓ All systems operational. Your Echo is in peak condition!\n'));
+    return;
+  }
+
+  console.log(chalk.yellow(`⚠ Found ${issues.length} potential issue(s):\n`));
+  
+  for (let i = 0; i < issues.length; i++) {
+    const issue = issues[i];
+    console.log(`${chalk.bold(i + 1 + '.')} ${chalk.yellow(issue.name)}`);
+    console.log(chalk.dim(`   ${issue.description}\n`));
+  }
+
+  // --- Interactive Fixing ---
+
+  const { applyFixes } = await enquirer.prompt({
+    type: 'confirm',
+    name: 'applyFixes',
+    message: 'Would you like to try fixing these issues?',
+    initial: true
+  }) as { applyFixes: boolean };
+
+  if (applyFixes) {
+    for (const issue of issues) {
+      const { fixIt } = await enquirer.prompt({
+        type: 'confirm',
+        name: 'fixIt',
+        message: `Fix "${issue.name}"?`,
+        initial: true
+      }) as { fixIt: boolean };
+
+      if (fixIt) {
+        try {
+          await issue.fix();
+        } catch (error: any) {
+          console.log(chalk.red(`✗ Failed to fix "${issue.name}": ${error.message}`));
+        }
+      }
+    }
+    console.log(chalk.bold.green('\n🎉 Diagnostic and repair complete!\n'));
+  } else {
+    console.log(chalk.dim('\nDiagnostic complete. No changes made.\n'));
   }
 }
 
-// Helper function
-function existsSync(path: string): boolean {
-  try {
-    const { existsSync: es } = require('fs');
-    return es(path);
-  } catch {
-    return false;
-  }
+// Helper function (local version for clarity)
+function existsSyncLocal(path: string): boolean {
+  return existsSync(path);
 }

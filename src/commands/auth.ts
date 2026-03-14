@@ -234,6 +234,49 @@ export async function authBox(): Promise<void> {
 }
 
 /**
+ * GitHub authentication flow
+ */
+export async function authGithub(): Promise<void> {
+  const config = getConfig();
+  const enquirer = new Enquirer();
+
+  console.log(chalk.bold('\n🐙 GitHub Collaboration Setup\n'));
+  console.log(chalk.dim('To get started, create a Personal Access Token (PAT) at:'));
+  console.log(chalk.cyan('https://github.com/settings/tokens\n'));
+  console.log(chalk.dim('Required Scopes: repo, gist, read:user\n'));
+
+  const answers = await enquirer.prompt([
+    {
+      type: 'password',
+      name: 'token',
+      message: 'Enter your GitHub Personal Access Token:',
+      validate: (v: string) => v.length > 5 || 'Invalid token',
+    }
+  ]) as { token: string };
+
+  const spinner = ora('Verifying GitHub connection...').start();
+
+  try {
+    const { Octokit } = await import('octokit');
+    const octokit = new Octokit({ auth: answers.token });
+    
+    // Verify by getting current user
+    const { data: user } = await octokit.rest.users.getAuthenticated();
+
+    config.setGithubConfig({
+      token: answers.token,
+      username: user.login,
+      enabled: true,
+    });
+
+    spinner.succeed(chalk.green(`✓ Linked as @${user.login} successfully!`));
+    console.log(chalk.dim('\nEcho can now open Pull Requests and sync Gists.\n'));
+  } catch (error: any) {
+    spinner.fail(chalk.red(`✗ GitHub link failed: ${error.message}`));
+  }
+}
+
+/**
  * Show current auth status
  */
 export async function authStatus(): Promise<void> {
@@ -338,4 +381,5 @@ export const authCommand = {
   status: authStatus,
   logout: authLogout,
   box: authBox,
+  github: authGithub,
 };

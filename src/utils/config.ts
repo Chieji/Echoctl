@@ -10,7 +10,9 @@ import crypto from 'crypto';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { AppConfig, ProviderConfig, ProviderName, BoxConfig } from '../types/index.js';
+import os from 'os';
+import chalk from 'chalk';
+import { AppConfig, ProviderConfig, ProviderName, BoxConfig, GithubConfig } from '../types/index.js';
 
 /**
  * Generate a secure encryption key from machine-specific identifiers
@@ -22,7 +24,7 @@ function deriveEncryptionKey(): string {
     homedir(),           // User home directory
     process.platform,    // OS platform
     process.arch,        // CPU architecture
-    process.env.HOSTNAME || 'unknown',  // Hostname
+    os.hostname() || 'unknown',  // Machine hostname
   ];
   
   const seed = components.join('|');
@@ -56,6 +58,9 @@ const defaultConfig: AppConfig = {
   box: {
     enabled: false,
   },
+  github: {
+    enabled: false,
+  },
   defaultProvider: 'gemini',
   smartModeEnabled: true,
   contextLength: 10,
@@ -69,17 +74,59 @@ export class ConfigStore {
   private rateLimits: Map<string, { count: number; resetTime: number }>;
 
   constructor() {
-    const encryptionKey = deriveEncryptionKey();
-    
-    this.store = new Conf<AppConfig>({
-      projectName: 'echo-cli',
-      defaults: defaultConfig,
-      // Use derived encryption key for proper security
-      encryptionKey: encryptionKey,
-    });
-    
-    // Rate limit tracking (in-memory)
     this.rateLimits = new Map();
+    
+    try {
+      const encryptionKey = deriveEncryptionKey();
+      this.store = new Conf<AppConfig>({
+        projectName: 'echo-cli',
+        defaults: defaultConfig,
+        encryptionKey: encryptionKey,
+      });
+      
+      // Force a read to verify encryption key is correct
+      this.store.get('defaultProvider');
+    } catch (error: any) {
+      // If we're hitting a JSON parse error, it's almost certainly an encryption key mismatch
+      if (error.message.includes('Unexpected token') || error.message.includes('not valid JSON')) {
+          // Attempt to self-heal
+          const configPath = join(homedir(), '.config', 'echo-cli-nodejs', 'config.json');
+          
+          if (existsSync(configPath)) {
+            const backupPath = `${configPath}.corrupted.${Date.now()}`;
+            try {
+              // Move the corrupted file away
+              // We use try/catch because we might have permission issues
+              const content = readFileSync(configPath);
+              writeFileSync(backupPath, content);
+              // Instead of deleting, we'll try to re-initialize Conf which will overwrite or create new
+              // But Conf might still be unhappy. Let's try to write a fresh empty object to the file first.
+              writeFileSync(configPath, JSON.stringify({}));
+            } catch (fsError) {
+              // If we can't even backup/write, we're in trouble
+            }
+          }
+
+          // Try one more time with a fresh start
+          try {
+            const encryptionKey = deriveEncryptionKey();
+            this.store = new Conf<AppConfig>({
+              projectName: 'echo-cli',
+              defaults: defaultConfig,
+              encryptionKey: encryptionKey,
+            });
+            console.log(chalk.yellow('\n⚠ Config corrupted or encrypted with old key. Backed up and reset to defaults.\n'));
+          } catch (retryError) {
+            // Last resort: No encryption
+            this.store = new Conf<AppConfig>({
+              projectName: 'echo-cli-emergency',
+              defaults: defaultConfig
+            });
+          }
+      } else {
+        throw error;
+      }
+    }
   }
 
   /**
@@ -227,6 +274,28 @@ export class ConfigStore {
   isBoxConfigured(): boolean {
     const config = this.getBoxConfig();
     return !!config?.enabled && (!!config.developerToken || (!!config.clientId && !!config.clientSecret));
+  }
+
+  /**
+   * Get GitHub configuration
+   */
+  getGithubConfig(): GithubConfig | undefined {
+    return this.store.get('github');
+  }
+
+  /**
+   * Set GitHub configuration
+   */
+  setGithubConfig(config: GithubConfig): void {
+    this.store.set('github', config);
+  }
+
+  /**
+   * Check if GitHub is enabled and configured
+   */
+  isGithubConfigured(): boolean {
+    const config = this.getGithubConfig();
+    return !!config?.enabled && !!config.token;
   }
 
   /**
