@@ -143,6 +143,23 @@ export async function agentTools(): Promise<void> {
     }
     console.log('');
   }
+
+  // MCP Tools
+  try {
+    const { getMCPManager } = await import('../extensions/mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+    
+    if (Object.keys(mcpTools).length > 0) {
+      console.log(chalk.bold('MCP (Remote):'));
+      for (const toolKey of Object.keys(mcpTools)) {
+        console.log(`  • ${toolKey}`);
+      }
+      console.log('');
+    }
+  } catch (error) {
+    // Ignore MCP errors in tools listing
+  }
   
   console.log(chalk.dim('Total: 30+ tools available to agent\n'));
 }

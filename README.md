@@ -152,6 +152,7 @@ echo agent doctor
 - 📦 **Git**: `getGitStatus`, `gitAdd`, `gitCommit`, `gitPush`, `gitLog`
 - 📝 **Multi-File**: `findAndReplace`, `searchInFiles`, `createFiles`
 - 🔬 **LSP**: `findSymbolReferences`, `renameSymbol`, `findSymbolDefinition`
+- 🏔 **Knowledge**: `mount` - Mount local folders or URLs as knowledge sources
 
 ---
 
@@ -243,6 +244,11 @@ echo brain stats
 # Export/Import
 echo brain export -o backup.json
 echo brain import backup.json
+
+# Knowledge Mounting
+echo mount add ./docs --name "Project Docs"
+echo mount list
+echo mount remove <id>
 ```
 
 ### HITL Approvals

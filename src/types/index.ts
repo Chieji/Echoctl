@@ -127,6 +127,19 @@ export interface GithubConfig {
 }
 
 /**
+ * Mount source (local folder or URL)
+ */
+export interface MountSource {
+  id: string;
+  name: string;
+  type: 'local' | 'web';
+  path: string;
+  enabled: boolean;
+  description?: string;
+  lastIndexedAt?: number;
+}
+
+/**
  * Configuration storage structure
  */
 export interface AppConfig {
@@ -148,6 +161,7 @@ export interface AppConfig {
   };
   box?: BoxConfig;
   github?: GithubConfig;
+  mounts?: MountSource[];
   defaultProvider: ProviderName;
   smartModeEnabled: boolean;
   contextLength: number;

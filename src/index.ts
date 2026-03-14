@@ -19,6 +19,7 @@ import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, a
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
 import { setupMcpCommand } from './commands/mcp.js';
+import { setupMountCommand } from './commands/mount.js';
 import { render } from 'ink';
 import { StartupSequence } from './tui/startup.js';
 import { Dashboard } from './tui/echomen-dashboard.js';
@@ -708,6 +709,7 @@ function createCLI(): Command {
   // ============================================================================
 
   setupMcpCommand(program);
+  setupMountCommand(program);
 
 
   // ============================================================================

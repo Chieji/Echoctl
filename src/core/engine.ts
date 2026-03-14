@@ -10,9 +10,10 @@ import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader
 import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
+import { getMCPManager } from '../extensions/mcp.js';
 
-// Build unified tool registry
-const toolRegistry = {
+// Initial static tool registry
+const staticToolRegistry = {
   ...tools,
   ...webTools,
   ...gitTools,
@@ -21,9 +22,6 @@ const toolRegistry = {
   ...browserTools,
   ...githubTools,
 };
-
-// Get all tool names for system prompt
-const availableTools = Object.keys(toolRegistry);
 
 export interface EngineConfig {
   yoloMode: boolean;
@@ -61,7 +59,7 @@ export const READ_ONLY_TOOLS: ToolName[] = [
 /**
  * System prompt generator for ReAct behavior
  */
-export function getSystemPrompt(planMode: boolean = false): string {
+export function getSystemPrompt(planMode: boolean = false, dynamicTools: Record<string, string> = {}): string {
   let basePrompt = `You are Echo, an autonomous AI agent with tool execution capabilities.
 
 You follow the ReAct (Reason + Act) pattern:
@@ -139,6 +137,13 @@ Available tools (use EXACT names below):\n`;
 - githubCreateIssue(owner, repo, title, body?, labels?): Create a GitHub issue
 - githubSearchRepos(query): Search for GitHub repositories
 - githubGetUser(): Get information about the linked GitHub user\n`;
+
+    // Add dynamic (MCP) tools
+    Object.entries(dynamicTools).forEach(([name, description]) => {
+      if (!staticToolRegistry.hasOwnProperty(name)) {
+        basePrompt += `- ${name}: ${description}\n`;
+      }
+    });
   }
 
   basePrompt += `
@@ -185,6 +190,7 @@ export class ReActEngine {
   private config: EngineConfig;
   private state: EngineState;
   private yoloMode: boolean;
+  private toolRegistry: any = staticToolRegistry;
 
   constructor(providerChain: ProviderChain, config?: Partial<EngineConfig>) {
     this.providerChain = providerChain;
@@ -207,7 +213,39 @@ export class ReActEngine {
    * Run the ReAct loop
    */
   async run(task: string): Promise<{ success: boolean; result: string; actions: string[] }> {
-    const spinner = ora({ text: 'Thinking...', spinner: 'dots' }).start();
+    const spinner = ora({ text: 'Starting engine...', spinner: 'dots' }).start();
+    
+    // 1. Initialize tool registry with MCP tools
+    const dynamicToolDescriptions: Record<string, string> = {};
+    try {
+      spinner.text = 'Initializing MCP tools...';
+      const mcpManager = await getMCPManager();
+      const mcpTools = await mcpManager.getAllTools();
+      
+      const dynamicMcpTools: any = {};
+      for (const [key, { tool }] of Object.entries(mcpTools)) {
+        dynamicMcpTools[key] = async (args: any) => {
+          const mcp = await getMCPManager();
+          const allTools = await mcp.getAllTools();
+          const target = allTools[key];
+          if (!target) throw new Error(`MCP Tool ${key} no longer available`);
+          return await target.client.callTool(tool.name, args);
+        };
+        
+        // Provide rich description for the prompt
+        const schema = JSON.stringify(tool.inputSchema);
+        dynamicToolDescriptions[key] = `${tool.description || 'Remote tool'} (Schema: ${schema})`;
+      }
+
+      this.toolRegistry = {
+        ...staticToolRegistry,
+        ...dynamicMcpTools
+      };
+    } catch (err) {
+      spinner.warn('MCP initialization failed. Proceeding with static tools only.');
+    }
+
+    spinner.text = 'Thinking...';
     
     this.state.currentTask = task;
     this.state.iteration = 0;
@@ -215,7 +253,7 @@ export class ReActEngine {
 
     // Load ECHO.md context if available
     const echoContext = await loadEchoContext();
-    const systemPromptText = getSystemPrompt(this.config.planMode);
+    const systemPromptText = getSystemPrompt(this.config.planMode, dynamicToolDescriptions);
     const systemContext = echoContext 
       ? `${systemPromptText}\n\n${formatContextForPrompt(echoContext)}`
       : systemPromptText;
@@ -365,12 +403,12 @@ export class ReActEngine {
       }
     }
 
-    // Execute the tool using unified registry
-    const toolFn = toolRegistry[tool as keyof typeof toolRegistry];
+    // Execute the tool using dynamic registry
+    const toolFn = this.toolRegistry[tool as keyof typeof this.toolRegistry];
     if (!toolFn) {
       return {
         success: false,
-        output: `Unknown tool: ${tool}. Available: ${availableTools.join(', ')}`,
+        output: `Unknown tool: ${tool}. Available: ${Object.keys(this.toolRegistry).join(', ')}`,
       };
     }
 

@@ -12,7 +12,7 @@ import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import os from 'os';
 import chalk from 'chalk';
-import { AppConfig, ProviderConfig, ProviderName, BoxConfig, GithubConfig } from '../types/index.js';
+import { AppConfig, ProviderConfig, ProviderName, BoxConfig, GithubConfig, MountSource } from '../types/index.js';
 
 /**
  * Generate a secure encryption key from machine-specific identifiers
@@ -61,6 +61,7 @@ const defaultConfig: AppConfig = {
   github: {
     enabled: false,
   },
+  mounts: [],
   defaultProvider: 'gemini',
   smartModeEnabled: true,
   contextLength: 10,
@@ -296,6 +297,47 @@ export class ConfigStore {
   isGithubConfigured(): boolean {
     const config = this.getGithubConfig();
     return !!config?.enabled && !!config.token;
+  }
+
+  /**
+   * Get all mounted sources
+   */
+  getMounts(): MountSource[] {
+    return this.store.get('mounts') || [];
+  }
+
+  /**
+   * Add a new mounted source
+   */
+  addMount(mount: MountSource): void {
+    const mounts = this.getMounts();
+    // Check for duplicates
+    if (mounts.find(m => m.id === mount.id || (m.path === mount.path && m.type === mount.type))) {
+      throw new Error(`Mount source already exists: ${mount.path}`);
+    }
+    this.store.set('mounts', [...mounts, mount]);
+  }
+
+  /**
+   * Remove a mounted source
+   */
+  removeMount(id: string): void {
+    const mounts = this.getMounts();
+    this.store.set('mounts', mounts.filter(m => m.id !== id && m.name !== id));
+  }
+
+  /**
+   * Toggle a mounted source
+   */
+  toggleMount(id: string, enabled: boolean): void {
+    const mounts = this.getMounts();
+    const updated = mounts.map(m => {
+      if (m.id === id || m.name === id) {
+        return { ...m, enabled };
+      }
+      return m;
+    });
+    this.store.set('mounts', updated);
   }
 
   /**

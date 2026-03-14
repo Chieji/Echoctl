@@ -47,7 +47,7 @@ export function setupMcpCommand(program: Command) {
         servers.forEach(server => {
           const status = server.enabled ? chalk.green('✓') : chalk.dim('○');
           console.log(`${status} ${chalk.bold(server.name)}`);
-          console.log(chalk.dim(`  URL/CMD: ${server.url}`));
+          console.log(chalk.dim(`  URL/CMD: ${server.command}`));
           if (server.description) console.log(chalk.dim(`  ${server.description}`));
           if (server.skills && server.skills.length > 0) {
             console.log(chalk.dim(`  Skills: ${server.skills.join(', ')}`));
