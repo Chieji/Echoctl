@@ -1,244 +1,50 @@
-# CONTRIBUTING.md - How to Contribute to Echo
+# Contributing to Echo 💖
 
-Thanks for wanting to improve Echo! Here's how to contribute.
+First off, thank you for considering contributing to Echo! It's people like you that make Echo such a "Big Heart" project. 
 
----
+This project is built out of love and is open for everyone. Whether you're fixing a typo, proposing a new feature, or refactoring the core BDI engine, your help is appreciated.
 
-## Quick Start
+## 🌈 How Can You Contribute?
+
+### 🐛 Reporting Bugs
+- Use the **GitHub Issue Tracker**.
+- Describe the bug and provide steps to reproduce.
+- Include your environment details (Node version, OS).
+
+### ✨ Proposing Features
+- New ideas are the fuel of Echo!
+- Explain why the feature is needed and how it fits the "Echo" philosophy.
+
+### 📝 Pull Requests
+1. **Fork** the repo and create your branch from `main`.
+2. **Install** dependencies: `npm install`.
+3. **Write** your code and follow the [Coding Standards](#-coding-standards).
+4. **Test** your changes: `npm test`.
+5. **Document** new features in the README.
+6. **Submit** your PR with a clear description of what you've done.
+
+## 📜 Coding Standards
+
+- **TypeScript Everywhere**: We love type safety.
+- **Clean Code**: Use descriptive names; aim for functions that do one thing.
+- **Love your Tests**: We aim for 60%+ coverage. Please add tests for new features!
+- **Follow the BDI**: Ensure agent features respect the Perception-Reason-Action cycle.
+
+## ❤️ Commmunity & Love
+
+Echo is built on respect and collaboration. 
+- Be kind to others.
+- Help out where you can.
+- Remember: *No be only me get am* (It belongs to all of us).
+
+## 🚀 Development Setup
 
 ```bash
-# Fork and clone
-git clone https://github.com/your-username/echoctl.git
+git clone https://github.com/YOUR-USERNAME/echoctl.git
 cd echoctl
-
-# Install dependencies
 npm install
-
-# Start development
-npm run dev
-
-# Build
 npm run build
+npm link
 ```
 
----
-
-## Development Workflow
-
-### 1. Create a Branch
-```bash
-git checkout -b feature/your-feature-name
-```
-
-### 2. Make Changes
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-
-### 3. Test
-```bash
-# Run all tests
-npm test
-
-# Check types
-npm run type-check
-
-# Lint
-npm run lint
-```
-
-### 4. Commit
-```bash
-# Use conventional commits
-git commit -m "feat: add new provider support"
-git commit -m "fix: resolve memory leak in token watcher"
-git commit -m "docs: update README with examples"
-```
-
-### 5. Push and PR
-```bash
-git push origin feature/your-feature-name
-# Then open a PR on GitHub
-```
-
----
-
-## Code Style
-
-### TypeScript
-- Strict mode enabled
-- No `any` types (use `unknown` if needed)
-- Explicit return types on functions
-- Interfaces for object shapes
-
-### Naming
-```typescript
-// Classes: PascalCase
-class ProviderChain {}
-
-// Functions: camelCase
-function generateResponse() {}
-
-// Constants: UPPER_CASE
-const DEFAULT_TIMEOUT = 30000;
-
-// Types: PascalCase
-type ProviderName = 'openai' | 'gemini';
-```
-
-### File Structure
-```
-src/
-├── commands/      # CLI commands
-├── providers/     # AI provider implementations
-├── tools/         # Tool executors
-├── utils/         # Utilities
-├── types/         # Type definitions
-└── index.ts       # Entry point
-```
-
----
-
-## Adding a New Provider
-
-1. Create `src/providers/newprovider.ts`:
-```typescript
-import { BaseProvider } from './base.js';
-
-export class NewProviderProvider extends BaseProvider {
-  readonly name: ProviderName = 'newprovider';
-  
-  async generateResponse(messages: Message[]): Promise<ProviderResponse> {
-    // Implementation
-  }
-}
-```
-
-2. Update `src/providers/index.ts`:
-```typescript
-export { NewProviderProvider } from './newprovider.js';
-
-// Add to createProvider switch
-case 'newprovider':
-  return new NewProviderProvider(apiKey, model);
-```
-
-3. Update `src/types/index.ts`:
-```typescript
-export type ProviderName = '...' | 'newprovider' | '...';
-```
-
-4. Update `src/utils/smart-mode.ts`:
-```typescript
-// Add to smart selection logic if applicable
-```
-
-5. Add tests in `tests/providers/newprovider.test.ts`
-
----
-
-## Adding a New Tool
-
-1. Create `src/tools/newtool.ts`:
-```typescript
-export async function newTool(param: string): Promise<ToolResult> {
-  // Implementation
-}
-```
-
-2. Export from `src/tools/executor.ts`:
-```typescript
-export { newTool } from './newtool.js';
-```
-
-3. Add to ReAct engine tool registry in `src/core/engine.ts`
-
-4. Document in `TOOLS.md`
-
----
-
-## Testing
-
-### Unit Tests
-```typescript
-import { describe, it, expect } from '@jest/globals';
-
-describe('ProviderChain', () => {
-  it('should failover when primary fails', async () => {
-    // Test implementation
-  });
-});
-```
-
-### Integration Tests
-```bash
-# Test with real API (requires keys)
-npm run test:integration
-```
-
-### Manual Testing
-```bash
-# Build and test locally
-npm run build
-node dist/index.js chat "test message"
-```
-
----
-
-## Documentation
-
-### README.md
-- Update feature list
-- Add usage examples
-- Update provider table
-
-### Provider Docs
-- Add to provider comparison table
-- Document API requirements
-- Add setup instructions
-
-### Code Comments
-- Explain _why_, not _what_
-- Document complex logic
-- Add examples for public APIs
-
----
-
-## Pull Request Guidelines
-
-### Title
-- Clear and descriptive
-- Use conventional commit format
-
-### Description
-- What does this PR do?
-- Why is it needed?
-- How was it tested?
-
-### Checklist
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] TypeScript compiles
-- [ ] Lint passes
-- [ ] No breaking changes (or marked as such)
-
----
-
-## Release Process
-
-1. Version bump in `package.json`
-2. Update `CHANGELOG.md`
-3. Tag release
-4. Publish to npm
-
----
-
-## Questions?
-
-- Open an issue for bugs
-- Use discussions for questions
-- Check existing issues before creating new ones
-
----
-
-_Thanks for contributing to Echo! 🙏_
+Happy hacking! We can't wait to see what you echo.
