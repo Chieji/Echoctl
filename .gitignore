@@ -73,3 +73,9 @@ venv.bak/
 .DS_Store
 Thumbs.db
 .npmrc
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+

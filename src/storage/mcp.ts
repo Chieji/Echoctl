@@ -1,8 +1,3 @@
-/**
- * MCP (Model Context Protocol) Integration
- * Allows Echo to connect to MCP servers for extended capabilities
- */
-
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -12,68 +7,43 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-export interface MCPServer {
-  name: string;
-  url: string;
-  description?: string;
-  skills: string[];
-  enabled: boolean;
+export interface MCPServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  enabled?: boolean; // Echo-specific extension
+  description?: string; // Echo-specific extension
 }
 
-export interface MCPConfig {
-  servers: MCPServer[];
+export interface MCPRegistry {
+  mcpServers: Record<string, MCPServerConfig>;
 }
 
 const MCP_CONFIG_PATH = join(homedir(), '.config', 'echo-cli', 'mcp.json');
 
 /**
- * Default MCP servers
- */
-const DEFAULT_SERVERS: MCPServer[] = [
-  {
-    name: 'github',
-    url: 'https://api.github.com',
-    description: 'GitHub API integration',
-    skills: ['search_repos', 'get_issues', 'create_pr'],
-    enabled: false,
-  },
-  {
-    name: 'filesystem',
-    url: 'local',
-    description: 'Enhanced filesystem operations',
-    skills: ['search_files', 'watch_directory', 'sync_folders'],
-    enabled: true,
-  },
-  {
-    name: 'web-search',
-    url: 'https://api.example.com/search',
-    description: 'Web search capabilities',
-    skills: ['search_web', 'get_news', 'fetch_url'],
-    enabled: false,
-  },
-];
-
-/**
  * Load MCP configuration
  */
-export async function loadMCPConfig(): Promise<MCPConfig> {
+export async function loadMCPConfig(): Promise<MCPRegistry> {
   try {
     if (existsSync(MCP_CONFIG_PATH)) {
       const content = await readFile(MCP_CONFIG_PATH, 'utf-8');
-      return JSON.parse(content) as MCPConfig;
+      const parsed = JSON.parse(content);
+      if (parsed.mcpServers) {
+        return parsed as MCPRegistry;
+      }
     }
   } catch (error) {
-    console.error('Error loading MCP config:', error);
+    // Ignore parse errors
   }
 
-  // Return default config
-  return { servers: DEFAULT_SERVERS };
+  return { mcpServers: {} };
 }
 
 /**
  * Save MCP configuration
  */
-export async function saveMCPConfig(config: MCPConfig): Promise<void> {
+export async function saveMCPConfig(config: MCPRegistry): Promise<void> {
   const configDir = join(homedir(), '.config', 'echo-cli');
   
   if (!existsSync(configDir)) {
@@ -93,19 +63,13 @@ export async function addMCPServer(
 ): Promise<void> {
   const config = await loadMCPConfig();
   
-  // Check if already exists
-  const existing = config.servers.find(s => s.name === name);
-  if (existing) {
-    throw new Error(`Server '${name}' already exists`);
-  }
-
-  config.servers.push({
-    name,
-    url,
-    description,
-    skills: [],
+  // For 'add', we assume it's a command/URL
+  config.mcpServers[name] = {
+    command: url, // In simple 'add', URL is the command
+    args: [],
     enabled: true,
-  });
+    description,
+  };
 
   await saveMCPConfig(config);
 }
@@ -115,7 +79,7 @@ export async function addMCPServer(
  */
 export async function removeMCPServer(name: string): Promise<void> {
   const config = await loadMCPConfig();
-  config.servers = config.servers.filter(s => s.name !== name);
+  delete config.mcpServers[name];
   await saveMCPConfig(config);
 }
 
@@ -127,30 +91,24 @@ export async function setMCPServerEnabled(
   enabled: boolean
 ): Promise<void> {
   const config = await loadMCPConfig();
-  const server = config.servers.find(s => s.name === name);
-  
-  if (!server) {
+  if (config.mcpServers[name]) {
+    config.mcpServers[name].enabled = enabled;
+    await saveMCPConfig(config);
+  } else {
     throw new Error(`Server '${name}' not found`);
   }
-
-  server.enabled = enabled;
-  await saveMCPConfig(config);
 }
 
 /**
  * List available MCP servers
  */
-export async function listMCPServers(): Promise<MCPServer[]> {
+export async function listMCPServers(): Promise<any[]> {
   const config = await loadMCPConfig();
-  return config.servers;
-}
-
-/**
- * Get enabled MCP servers
- */
-export async function getEnabledMCPServers(): Promise<MCPServer[]> {
-  const config = await loadMCPConfig();
-  return config.servers.filter(s => s.enabled);
+  return Object.entries(config.mcpServers).map(([name, cfg]) => ({
+    name,
+    ...cfg,
+    enabled: cfg.enabled !== false, // default to true
+  }));
 }
 
 /**
@@ -165,7 +123,6 @@ export async function installMCPSkill(packageName: string): Promise<void> {
 
   try {
     await execAsync(`npm install ${packageName}`, { cwd });
-    console.log(`✓ Installed MCP skill: ${packageName}`);
   } catch (error: any) {
     throw new Error(`Failed to install skill: ${error.message}`);
   }
@@ -177,23 +134,25 @@ export async function installMCPSkill(packageName: string): Promise<void> {
 export async function listMCPSkills(): Promise<string[]> {
   const cwd = join(homedir(), '.config', 'echo-cli', 'skills');
   
-  if (!existsSync(cwd)) {
-    return [];
-  }
+  if (!existsSync(cwd)) return [];
 
   try {
     const { stdout } = await execAsync('npm list --depth=0', { cwd });
-    const lines = stdout.split('\n').slice(1); // Skip first line
+    const lines = stdout.split('\n').slice(1);
     return lines
       .filter(line => line.trim() && !line.includes('empty'))
-      .map(line => line.split('@')[0].trim());
+      .map(line => {
+        const parts = line.split(' ');
+        const pkg = parts[parts.length - 1];
+        return pkg.split('@')[0].trim();
+      });
   } catch {
     return [];
   }
 }
 
 /**
- * MCP command handlers
+ * MCP command handlers boilerplate
  */
 export const mcpCommands = {
   list: listMCPServers,

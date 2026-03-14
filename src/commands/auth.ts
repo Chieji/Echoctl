@@ -181,6 +181,59 @@ export async function authLogin(): Promise<void> {
 }
 
 /**
+ * Box.com authentication flow
+ */
+export async function authBox(): Promise<void> {
+  const config = getConfig();
+  const enquirer = new Enquirer();
+
+  console.log(chalk.bold('\n📦 Box.com Cloud Memory Setup\n'));
+  console.log(chalk.dim('To get started, create a developer token at:'));
+  console.log(chalk.cyan('https://developer.box.com/console\n'));
+
+  const answers = await enquirer.prompt([
+    {
+      type: 'password',
+      name: 'token',
+      message: 'Enter your Box Developer Token:',
+      validate: (v: string) => v.length > 5 || 'Invalid token',
+    },
+    {
+      type: 'input',
+      name: 'folderId',
+      message: 'Enter Box Folder ID (optional, leave empty for root):',
+      initial: '0',
+    }
+  ]) as { token: string; folderId: string };
+
+  const spinner = ora('Verifying Box connection...').start();
+
+  try {
+    // Temporarily set and test Box config
+    config.setBoxConfig({
+      developerToken: answers.token,
+      folderId: answers.folderId,
+      enabled: true,
+    });
+
+    const { getBoxStore } = await import('../storage/external/box.js');
+    const box = getBoxStore();
+    const success = await box.init();
+
+    if (success) {
+      spinner.succeed(chalk.green('✓ Box.com Cloud Memory linked successfully!'));
+      console.log(chalk.dim('\nEcho will now sync your brain to Box in the background.\n'));
+    } else {
+      throw new Error('Connection test failed');
+    }
+  } catch (error: any) {
+    spinner.fail(chalk.red(`✗ Box link failed: ${error.message}`));
+    // Revert config on failure
+    config.setBoxConfig({ enabled: false });
+  }
+}
+
+/**
  * Show current auth status
  */
 export async function authStatus(): Promise<void> {
@@ -284,4 +337,5 @@ export const authCommand = {
   login: authLogin,
   status: authStatus,
   logout: authLogout,
+  box: authBox,
 };

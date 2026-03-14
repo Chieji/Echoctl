@@ -21,6 +21,18 @@ export abstract class BaseProvider implements IProvider {
 
   abstract generateResponse(messages: Message[], context?: string): Promise<ProviderResponse>;
 
+  /**
+   * Optional streaming response implementation.
+   * If not overridden, falls back to standard generateResponse and fires chunk once.
+   */
+  async generateStream(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse> {
+    const response = await this.generateResponse(messages, context);
+    if (onChunk) {
+      onChunk(response.content);
+    }
+    return response;
+  }
+
   isConfigured(): boolean {
     return !!this.apiKey && this.apiKey.length > 0;
   }

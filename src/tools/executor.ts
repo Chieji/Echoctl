@@ -8,6 +8,7 @@ import { promisify } from 'util';
 import { readFile, writeFile, readdir, stat, rm } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { existsSync } from 'fs';
+import os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -25,6 +26,7 @@ export interface ToolResult {
 const DANGEROUS_PATTERNS = [
   // Disk destruction
   { pattern: /rm\s+(-[rf]+\s+)?\/\s*$/, reason: 'Cannot delete root directory' },
+  { pattern: /rm\s+(-[rf]+\s+)?\/\s+--no-preserve-root/, reason: 'Cannot delete root directory' },
   { pattern: /rm\s+(-[rf]+\s+)?\*\s*$/, reason: 'Cannot delete all files in directory' },
   { pattern: /rm\s+-rf\s+\.\.\//, reason: 'Cannot delete parent directories recursively' },
   
@@ -232,8 +234,8 @@ export async function deleteFileTool(
  * Execute Python code
  */
 export async function executePython(code: string): Promise<ToolResult> {
-  // Write code to temp file
-  const tempFile = join(process.cwd(), `echo_temp_${Date.now()}.py`);
+  // Write code to OS temp directory (not project cwd) for safety
+  const tempFile = join(os.tmpdir(), `echo_temp_${Date.now()}_${Math.random().toString(36).slice(2)}.py`);
   
   try {
     await writeFile(tempFile, code);
@@ -246,6 +248,8 @@ export async function executePython(code: string): Promise<ToolResult> {
     
     return result;
   } catch (error: any) {
+    // Ensure cleanup even on error
+    try { await rm(tempFile); } catch {}
     return {
       success: false,
       output: '',
@@ -258,7 +262,8 @@ export async function executePython(code: string): Promise<ToolResult> {
  * Execute Node.js code
  */
 export async function executeNode(code: string): Promise<ToolResult> {
-  const tempFile = join(process.cwd(), `echo_temp_${Date.now()}.js`);
+  // Write code to OS temp directory (not project cwd) for safety
+  const tempFile = join(os.tmpdir(), `echo_temp_${Date.now()}_${Math.random().toString(36).slice(2)}.js`);
   
   try {
     await writeFile(tempFile, code);
@@ -271,6 +276,8 @@ export async function executeNode(code: string): Promise<ToolResult> {
     
     return result;
   } catch (error: any) {
+    // Ensure cleanup even on error
+    try { await rm(tempFile); } catch {}
     return {
       success: false,
       output: '',
@@ -292,7 +299,6 @@ export const tools = {
   executeNode,
 };
 
-export type ToolName = keyof typeof tools;
 
 // Re-export git, web, and multi-file tools
 export * from './git.js';
@@ -349,3 +355,11 @@ export const browserTools = {
   getLinks: browserGetLinks,
   searchGoogle: browserSearchGoogle,
 };
+
+export type ToolName = 
+  | keyof typeof tools 
+  | keyof typeof webTools 
+  | keyof typeof gitTools 
+  | keyof typeof multiFileTools 
+  | keyof typeof lspTools 
+  | keyof typeof browserTools;

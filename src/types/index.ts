@@ -76,6 +76,11 @@ export interface IProvider {
   generateResponse(messages: Message[], context?: string): Promise<ProviderResponse>;
   
   /**
+   * Generate a streaming response from the provider
+   */
+  generateStream?(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse>;
+  
+  /**
    * Check if provider is configured and available
    */
   isConfigured(): boolean;
@@ -102,6 +107,17 @@ export interface ChainResult {
 export type TaskType = 'code' | 'creative' | 'nuance' | 'general';
 
 /**
+ * External storage configuration (Box.com)
+ */
+export interface BoxConfig {
+  developerToken?: string;
+  clientId?: string;
+  clientSecret?: string;
+  folderId?: string;
+  enabled: boolean;
+}
+
+/**
  * Configuration storage structure
  */
 export interface AppConfig {
@@ -121,6 +137,7 @@ export interface AppConfig {
     huggingface?: ProviderConfig;
     github?: ProviderConfig;
   };
+  box?: BoxConfig;
   defaultProvider: ProviderName;
   smartModeEnabled: boolean;
   contextLength: number;

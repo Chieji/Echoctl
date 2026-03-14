@@ -16,14 +16,16 @@ A resilient, multi-provider AI CLI tool with ReAct agent capabilities, automatic
 
 | Feature | Description |
 |---------|-------------|
-| **14+ Providers** | OpenAI, Gemini, Claude, Groq, Ollama, and 9 more with auto-failover |
+| **BDI Engine** | Cognitive reasoning layer (Belief-Desire-Intention) for smarter goal planning |
+| **Box.com Sync** | "Generous Memory" - Automatically sync your agent's brain to the cloud |
+| **MCP Auto-Sync** | "The Master Thief" - Instantly harvest MCP tools from Claude and Cursor |
 | **ReAct Agent** | Reason → Act → Observe loop for autonomous task completion |
 | **Second Brain** | Persistent knowledge base with tags and search |
 | **HITL Approvals** | Human-in-the-loop for dangerous operations |
 | **Track Isolation** | Separate contexts for different projects |
-| **Interactive TUI** | Real-time dashboard with Ink (React for CLI) |
+| **Interactive TUI** | Premium dashboard with live File Tree and boot animations |
 | **Smart Mode** | Auto-selects best provider based on task type |
-| **Security First** | Encrypted config, dangerous command blocking, rate limiting |
+| **Security First** | Encrypted config, Plan Mode (Read-only), and dangerous command blocking |
 
 ### 🧠 ReAct Agent Mode
 
@@ -33,9 +35,14 @@ Echo follows the **Reason + Act** pattern:
 3. **Observe** - Analyzes results
 4. **Repeat** - Until task is complete
 
-### 🔄 Automatic Failover
+### 🛡️ Plan Mode
+Echo can run in **Plan Mode** (`echo agent run "task" --plan`), where it only uses read-only tools to explore and propose a plan without making any changes.
 
-If your primary provider fails (rate limit, API error), Echo automatically switches to your backup provider. No interrupted workflows.
+### 📦 Box.com Cloud Memory
+Echo uses Box.com to store its "Master Memory". It learns from your daily interactions across all devices.
+```bash
+echo auth box # Setup cloud memory sync
+```
 
 ---
 
@@ -287,16 +294,12 @@ echo clear session    # Delete current session entirely
 echo clear all        # Delete everything (irreversible!)
 ```
 
-### MCP (Model Context Protocol)
+### MCP (Model Context Protocol) 📡
 
 ```bash
+echo mcp sync                  # "The Master Thief" - Sync tools from Claude/Cursor
 echo mcp list                  # List MCP servers
 echo mcp add github https://...  # Add server
-echo mcp enable github         # Enable server
-echo mcp disable github        # Disable server
-echo mcp remove github         # Remove server
-echo mcp install @echo/github  # Install skill package
-echo mcp skills                # List installed skills
 ```
 
 ### Plugins

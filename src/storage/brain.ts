@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { join } from 'path';
 import { homedir } from 'os';
 import { mkdirSync, existsSync } from 'fs';
+import { getBoxStore } from './external/box.js';
 
 /**
  * Memory item structure
@@ -119,6 +120,14 @@ export class BrainStore {
       }
       await this.db.write();
       this.initialized = true;
+
+      // Sync from cloud on init if available
+      const boxStore = getBoxStore();
+      if (await boxStore.init()) {
+        const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
+        await boxStore.downloadMemory(dbPath);
+        await this.db.read(); // Refresh from downloaded file
+      }
     } catch (error: any) {
       console.error('Warning: Brain database error, recreating...', error.message);
       this.db.data = { memories: [] };
@@ -168,7 +177,21 @@ export class BrainStore {
     this.db.data!.memories.push(memory);
     await this.db.write();
 
+    // Trigger background cloud sync
+    this.syncToCloud();
+
     return memory;
+  }
+
+  /**
+   * Sync brain to Box in the background
+   */
+  private async syncToCloud(): Promise<void> {
+    const boxStore = getBoxStore();
+    if (await boxStore.init()) {
+      const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
+      await boxStore.uploadMemory(dbPath);
+    }
   }
 
   /**

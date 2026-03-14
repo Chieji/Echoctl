@@ -8,6 +8,7 @@ import { getMemory } from '../utils/memory.js';
 import { getSessionStore } from '../storage/sessions.js';
 import { ProviderChain } from '../providers/chain.js';
 import { getStateManager } from '../state/manager.js';
+import { BDIEngine } from '../core/bdi.js';
 
 /**
  * Run agent mode with a task
@@ -16,15 +17,28 @@ export async function agentRun(task: string, options: {
   provider?: string;
   yolo?: boolean;
   verbose?: boolean;
+  plan?: boolean;
 }): Promise<void> {
-  console.log(chalk.bold('\n🤖 Agent Run Mode\n'));
-  console.log(chalk.dim(`Task: ${task}`));
-  console.log(chalk.dim(`Provider: ${options.provider || 'auto'}`));
-  console.log(chalk.dim(`YOLO Mode: ${options.yolo ? '✓' : '✗'}`));
-  console.log(chalk.dim(`Verbose: ${options.verbose ? '✓' : '✗'}\n`));
+  console.log(chalk.bold('\n🤖 Agent BDI Run Mode\n'));
   
-  console.log(chalk.yellow('⚠️  This is a placeholder - full agent run requires ReAct engine integration\n'));
-  console.log(chalk.dim('Use: ') + chalk.cyan('echo chat "' + task + '" --agent') + chalk.dim('\n'));
+  const config = getConfig();
+  const providerChain = new ProviderChain(config.getAllProviderConfigs());
+  
+  const bdi = new BDIEngine(providerChain, {
+    yoloMode: options.yolo || false,
+    planMode: options.plan || false,
+  });
+
+  try {
+    const { result, intentionSummary } = await bdi.execute(task);
+    
+    console.log(chalk.bold.green('\n✅ Task Finalized'));
+    console.log(chalk.dim(`Intention Path: ${intentionSummary}\n`));
+    console.log(result);
+  } catch (error: any) {
+    console.log(chalk.red(`\n✗ Agent failed: ${error.message}`));
+    process.exit(1);
+  }
 }
 
 /**

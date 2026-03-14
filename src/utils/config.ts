@@ -10,7 +10,7 @@ import crypto from 'crypto';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { AppConfig, ProviderConfig, ProviderName } from '../types';
+import { AppConfig, ProviderConfig, ProviderName, BoxConfig } from '../types/index.js';
 
 /**
  * Generate a secure encryption key from machine-specific identifiers
@@ -52,6 +52,9 @@ const defaultConfig: AppConfig = {
     mistral: undefined,
     huggingface: undefined,
     github: undefined,
+  },
+  box: {
+    enabled: false,
   },
   defaultProvider: 'gemini',
   smartModeEnabled: true,
@@ -202,6 +205,28 @@ export class ConfigStore {
    */
   setContextLength(length: number): void {
     this.store.set('contextLength', length);
+  }
+
+  /**
+   * Get Box configuration
+   */
+  getBoxConfig(): BoxConfig | undefined {
+    return this.store.get('box');
+  }
+
+  /**
+   * Set Box configuration
+   */
+  setBoxConfig(config: BoxConfig): void {
+    this.store.set('box', config);
+  }
+
+  /**
+   * Check if Box is enabled and configured
+   */
+  isBoxConfigured(): boolean {
+    const config = this.getBoxConfig();
+    return !!config?.enabled && (!!config.developerToken || (!!config.clientId && !!config.clientSecret));
   }
 
   /**

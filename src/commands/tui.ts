@@ -2,7 +2,7 @@
  * TUI Commands - Launch interactive dashboard
  */
 
-import { launchDashboard as launchInteractiveDashboard } from '../tui/dashboard.js';
+import { launchDashboard as launchInteractiveDashboard } from '../tui/echomen-dashboard.js';
 import chalk from 'chalk';
 import { getConfig } from '../utils/config.js';
 import { getSessionStore } from '../storage/sessions.js';

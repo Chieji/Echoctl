@@ -48,7 +48,8 @@ export class ProviderChain {
   async generateWithFailover(
     messages: Message[],
     context?: string,
-    preferredProvider?: ProviderName
+    preferredProvider?: ProviderName,
+    onChunk?: (chunk: string) => void
   ): Promise<ChainResult> {
     const attempts: ProviderName[] = [];
     let lastError: Error | null = null;
@@ -79,7 +80,9 @@ export class ProviderChain {
       attempts.push(providerName);
 
       try {
-        const response = await provider.generateResponse(messages, context);
+        const response = provider.generateStream && onChunk
+          ? await provider.generateStream(messages, context, onChunk)
+          : await provider.generateResponse(messages, context);
         
         return {
           response,

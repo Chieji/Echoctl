@@ -10,6 +10,7 @@ import chalk from 'chalk';
 import gradient from 'gradient-string';
 import { authCommand, authAutoSync, authAutoDetect } from './commands/auth.js';
 import { chatCommand } from './commands/chat.js';
+import { startRepl } from './commands/repl.js';
 import { clearCommand } from './commands/clear.js';
 import { brainCommand } from './commands/brain.js';
 import { approveCommand } from './commands/approve.js';
@@ -17,9 +18,13 @@ import { trackCommand } from './commands/track.js';
 import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig, agentDoctor } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
 import { launchDashboard } from './commands/tui.js';
+import { setupMcpCommand } from './commands/mcp.js';
+import { render } from 'ink';
+import { StartupSequence } from './tui/startup.js';
+import { Dashboard } from './tui/echomen-dashboard.js';
+import React from 'react';
 import { getConfig } from './utils/config.js';
 import { ProviderName } from './types/index.js';
-import { mcpCommands } from './storage/mcp.js';
 import { displayStartupSequence } from './utils/banner.js';
 
 const packageJson = {
@@ -101,6 +106,18 @@ function createCLI(): Command {
         await authCommand.status();
       } catch (error) {
         console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  auth
+    .command('box')
+    .description('Configure Box.com Cloud Memory sync')
+    .action(async () => {
+      try {
+        await authCommand.box();
+      } catch (error) {
+        console.log(chalk.red('✗ Box setup failed:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -233,19 +250,41 @@ function createCLI(): Command {
     });
 
   // ============================================================================
-  // CHAT COMMANDS
+  // REPL / CHAT COMMANDS
   // ============================================================================
 
   program
-    .command('chat <message>')
-    .description('Start a conversation with AI')
+    .command('repl')
+    .aliases(['r'])
+    .description('Start interactive REPL mode (continuous chat loop)')
+    .option('-p, --provider <provider>', 'Specify provider (openai, gemini, anthropic)')
+    .option('-a, --agent', 'Start in Agent mode (can run tools)')
+    .option('--yolo', 'Start with YOLO mode enabled (no confirmations)')
+    .option('--session <id>', 'Resume specific session ID')
+    .action(async (options: {
+      provider?: ProviderName;
+      agent?: boolean;
+      yolo?: boolean;
+      session?: string;
+    }) => {
+      try {
+        await startRepl(options);
+      } catch (error) {
+        console.log(chalk.red('✗ REPL failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  program
+    .command('chat [message]')
+    .description('Start a conversation with AI (starts REPL if no message provided)')
     .option('-p, --provider <provider>', 'Specify provider (openai, gemini, anthropic)')
     .option('-s, --smart', 'Use smart mode (auto-select provider based on task)')
     .option('--session <id>', 'Use specific session ID')
     .option('-r, --raw', 'Raw output mode (no formatting)')
     .option('-a, --agent', 'Agent mode - ReAct loop with tool execution')
     .option('--yolo', 'YOLO mode - Execute commands without confirmation (use with --agent)')
-    .action(async (message: string, options: {
+    .action(async (message: string | undefined, options: {
       provider?: ProviderName;
       smart?: boolean;
       session?: string;
@@ -254,7 +293,17 @@ function createCLI(): Command {
       yolo?: boolean;
     }) => {
       try {
-        await chatCommand.chat(message, options);
+        if (!message) {
+          // If simply `echo chat` is passed, launch the REPL
+          await startRepl({
+            provider: options.provider,
+            agent: options.agent,
+            yolo: options.yolo,
+            session: options.session,
+          });
+        } else {
+          await chatCommand.chat(message, options);
+        }
       } catch (error) {
         console.log(chalk.red('✗ Chat failed:'), error instanceof Error ? error.message : error);
         process.exit(1);
@@ -646,123 +695,8 @@ function createCLI(): Command {
   // MCP COMMANDS
   // ============================================================================
 
-  const mcp = program.command('mcp').description('Manage MCP (Model Context Protocol) servers');
+  setupMcpCommand(program);
 
-  mcp
-    .command('list')
-    .description('List configured MCP servers')
-    .action(async () => {
-      try {
-        const servers = await mcpCommands.list();
-        console.log(chalk.bold('\n📡 MCP Servers\n'));
-        
-        if (servers.length === 0) {
-          console.log(chalk.dim('No MCP servers configured.\n'));
-          return;
-        }
-
-        servers.forEach(server => {
-          const status = server.enabled ? chalk.green('✓') : chalk.dim('○');
-          console.log(`${status} ${chalk.bold(server.name)}`);
-          console.log(chalk.dim(`  URL: ${server.url}`));
-          if (server.description) console.log(chalk.dim(`  ${server.description}`));
-          if (server.skills.length > 0) {
-            console.log(chalk.dim(`  Skills: ${server.skills.join(', ')}`));
-          }
-          console.log('');
-        });
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('add <name> <url>')
-    .description('Add a new MCP server')
-    .option('-d, --description <desc>', 'Server description')
-    .action(async (name: string, url: string, options: { description?: string }) => {
-      try {
-        await mcpCommands.add(name, url, options.description);
-        console.log(chalk.green(`✓ Added MCP server: ${name}\n`));
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('remove <name>')
-    .description('Remove an MCP server')
-    .action(async (name: string) => {
-      try {
-        await mcpCommands.remove(name);
-        console.log(chalk.green(`✓ Removed MCP server: ${name}\n`));
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('enable <name>')
-    .description('Enable an MCP server')
-    .action(async (name: string) => {
-      try {
-        await mcpCommands.enable(name);
-        console.log(chalk.green(`✓ Enabled MCP server: ${name}\n`));
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('disable <name>')
-    .description('Disable an MCP server')
-    .action(async (name: string) => {
-      try {
-        await mcpCommands.disable(name);
-        console.log(chalk.green(`✓ Disabled MCP server: ${name}\n`));
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('install <package>')
-    .description('Install an MCP skill package')
-    .action(async (pkg: string) => {
-      try {
-        await mcpCommands.install(pkg);
-        console.log(chalk.green(`✓ Installed MCP skill: ${pkg}\n`));
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
-
-  mcp
-    .command('skills')
-    .description('List installed MCP skills')
-    .action(async () => {
-      try {
-        const skills = await mcpCommands.skills();
-        console.log(chalk.bold('\n📦 Installed MCP Skills\n'));
-        
-        if (skills.length === 0) {
-          console.log(chalk.dim('No skills installed.\n'));
-          return;
-        }
-
-        skills.forEach(skill => console.log(`  • ${skill}`));
-        console.log('');
-      } catch (error) {
-        console.log(chalk.red('✗ Failed:'), error instanceof Error ? error.message : error);
-        process.exit(1);
-      }
-    });
 
   // ============================================================================
   // TRACK COMMANDS (Development Context Isolation)
@@ -893,6 +827,39 @@ function createCLI(): Command {
     });
 
   // ============================================================================
+  // ECHOMEN COMMAND - The Full AI Terminal Experience (DEFAULT)
+  // ============================================================================
+
+  // When running just 'echo' or 'echomen', launch the TUI
+  program
+    .command('men', { isDefault: true })
+    .alias('echomen')
+    .alias('tui')
+    .alias('ui')
+    .description('Launch ECHOMEN - The Ultimate AI Terminal Interface')
+    .action(async () => {
+      try {
+        const App = () => {
+          const [booted, setBooted] = React.useState(false);
+
+          if (!booted) {
+            return React.createElement(StartupSequence, {
+              onComplete: () => setBooted(true)
+            });
+          }
+
+          return React.createElement(Dashboard);
+        };
+
+        const { waitUntilExit } = render(React.createElement(App));
+        await waitUntilExit();
+      } catch (error) {
+        console.log(chalk.red('✗ ECHOMEN failed:'), error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
   // CONFIG COMMANDS
   // ============================================================================
 
@@ -944,7 +911,7 @@ function createCLI(): Command {
     });
 
   // ============================================================================
-  // DEFAULT ACTION (when no command is provided)
+  // DEFAULT ACTION (when no command is provided) - LAUNCH TUI
   // ============================================================================
 
   program
@@ -959,9 +926,26 @@ function createCLI(): Command {
           process.exit(1);
         }
       } else {
-        // Show help
-        showBanner();
-        program.help();
+        // No message - launch ECHOMEN TUI
+        try {
+          const App = () => {
+            const [booted, setBooted] = React.useState(false);
+
+            if (!booted) {
+              return React.createElement(StartupSequence, {
+                onComplete: () => setBooted(true)
+              });
+            }
+
+            return React.createElement(Dashboard);
+          };
+
+          const { waitUntilExit } = render(React.createElement(App));
+          await waitUntilExit();
+        } catch (error) {
+          console.log(chalk.red('✗ ECHOMEN failed:'), error instanceof Error ? error.message : error);
+          process.exit(1);
+        }
       }
     });
 
@@ -975,16 +959,18 @@ function createCLI(): Command {
 async function main(): Promise<void> {
   const program = createCLI();
 
-  // Display startup banner if no command provided (interactive mode)
-  if (!process.argv.slice(2).length) {
-    await displayStartupSequence();
-    program.help();
-  }
-
   // Handle uncaught errors
   process.on('uncaughtException', (error) => {
     console.log(chalk.red('\n✗ Unexpected error:'), error.message);
     console.log(chalk.dim('\nIf this persists, try running: echo clear all\n'));
+    process.exit(1);
+  });
+
+  // Handle unhandled promise rejections (critical for async CLI commands)
+  process.on('unhandledRejection', (reason: any) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    console.log(chalk.red('\n✗ Unhandled async error:'), message);
+    console.log(chalk.dim('\nThis is likely a bug. Please report it.\n'));
     process.exit(1);
   });
 

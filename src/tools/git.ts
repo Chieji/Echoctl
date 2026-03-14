@@ -72,7 +72,10 @@ export async function getGitStatus(cwd: string = process.cwd()): Promise<GitStat
       'git rev-list --left-right --count origin/HEAD...HEAD 2>/dev/null || echo "0\t0"',
       { cwd }
     );
-    const [ahead, behind] = remoteOut.trim().split('\t').map(Number);
+    // git rev-list --left-right returns [remote_count, local_count]
+    // remote_count = commits on remote not in local = behind
+    // local_count = commits on local not in remote = ahead
+    const [behind, ahead] = remoteOut.trim().split('\t').map(Number);
 
     // Get changed files
     const { stdout: changedOut } = await execAsync('git diff --name-only', { cwd });
@@ -151,7 +154,9 @@ export async function gitAddAll(cwd: string = process.cwd()): Promise<void> {
  */
 export async function gitCommit(message: string, cwd: string = process.cwd()): Promise<CommitResult> {
   try {
-    const { stdout } = await execAsync(`git commit -m "${message}"`, { cwd });
+    // Escape double quotes in commit message to prevent shell injection
+    const safeMessage = message.replace(/"/g, '\\"');
+    const { stdout } = await execAsync(`git commit -m "${safeMessage}"`, { cwd });
     const hashMatch = stdout.match(/\[([^\]]+)\s+([a-f0-9]+)/);
     
     return {
@@ -186,14 +191,17 @@ export async function gitPull(cwd: string = process.cwd()): Promise<void> {
  * Create branch
  */
 export async function gitCreateBranch(branch: string, cwd: string = process.cwd()): Promise<void> {
-  await execAsync(`git checkout -b ${branch}`, { cwd });
+  // Sanitize branch name: only allow alphanumeric, hyphens, underscores, slashes, dots
+  const safeBranch = branch.replace(/[^a-zA-Z0-9\-_\/.]/g, '');
+  await execAsync(`git checkout -b ${safeBranch}`, { cwd });
 }
 
 /**
  * Switch branch
  */
 export async function gitCheckout(branch: string, cwd: string = process.cwd()): Promise<void> {
-  await execAsync(`git checkout ${branch}`, { cwd });
+  const safeBranch = branch.replace(/[^a-zA-Z0-9\-_\/.]/g, '');
+  await execAsync(`git checkout ${safeBranch}`, { cwd });
 }
 
 /**
@@ -237,11 +245,13 @@ export async function createPullRequest(
       return { error: 'GitHub CLI (gh) not installed. Install from: https://cli.github.com' };
     }
 
-    const bodyArg = body ? `-b "${body}"` : '';
-    const baseArg = base ? `-B ${base}` : '';
+    // Escape double quotes in title and body to prevent shell injection
+    const safeTitle = title.replace(/"/g, '\\"');
+    const bodyArg = body ? `-b "${body.replace(/"/g, '\\"')}"` : '';
+    const baseArg = base ? `-B ${base.replace(/[^a-zA-Z0-9\-_\/.]/g, '')}` : '';
     
     const { stdout } = await execAsync(
-      `gh pr create --title "${title}" ${bodyArg} ${baseArg}`,
+      `gh pr create --title "${safeTitle}" ${bodyArg} ${baseArg}`,
       { cwd }
     );
 

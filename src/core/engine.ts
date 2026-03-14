@@ -28,6 +28,7 @@ export interface EngineConfig {
   yoloMode: boolean;
   maxIterations: number;
   contextLength: number;
+  planMode?: boolean;
 }
 
 export interface EngineState {
@@ -37,10 +38,30 @@ export interface EngineState {
   completedActions: string[];
 }
 
+// Define read-only tools for Plan Mode
+export const READ_ONLY_TOOLS: ToolName[] = [
+  'readFile', 
+  'listFiles', 
+  'searchWeb', 
+  'scrapeUrl', 
+  'getNews', 
+  'getGitStatus', 
+  'gitLog', 
+  'searchInFiles', 
+  'findFiles', 
+  'getFileTree', 
+  'findSymbolReferences', 
+  'findSymbolDefinition', 
+  'detectProjectLanguage', 
+  'getLinks', 
+  'searchGoogle'
+];
+
 /**
- * System prompt for ReAct behavior
+ * System prompt generator for ReAct behavior
  */
-const REACT_SYSTEM_PROMPT = `You are Echo, an autonomous AI agent with tool execution capabilities.
+export function getSystemPrompt(planMode: boolean = false): string {
+  let basePrompt = `You are Echo, an autonomous AI agent with tool execution capabilities.
 
 You follow the ReAct (Reason + Act) pattern:
 1. REASON: Think about what needs to be done
@@ -48,54 +69,89 @@ You follow the ReAct (Reason + Act) pattern:
 3. OBSERVE: Analyze the result
 4. REPEAT until the task is complete
 
-Available tools:
-- run_command: Execute shell commands
-- readFile: Read file contents
-- writeFile: Write to files
-- listFiles: List directory contents
-- deleteFile: Delete files/directories
-- executePython: Run Python code
-- executeNode: Run Node.js code
-- searchWeb: Search the web using DuckDuckGo (no API key needed)
-- scrapeUrl: Scrape content from a URL
-- getNews: Get latest news headlines
-- getGitStatus: Get git repository status
-- gitAdd: Stage files for commit
-- gitAddAll: Stage all changes
-- gitCommit: Commit staged changes
-- gitPush: Push to remote repository
-- gitLog: View commit history
-- findAndReplace: Find and replace text across multiple files
-- searchInFiles: Search for pattern in multiple files
-- createFiles: Create multiple files at once
-- updateFiles: Update multiple files
-- deleteFiles: Delete multiple files
-- findFiles: Find files by pattern
-- getFileTree: Get directory tree structure
-- findSymbolReferences: Find all references to a code symbol
-- renameSymbol: Rename a symbol across the codebase
-- findSymbolDefinition: Find where a symbol is defined
-- detectProjectLanguage: Detect the programming language of a project
-- browserNavigate: Navigate to a website URL
-- browserScreenshot: Take a screenshot of current page
-- browserClick: Click an element on the page
-- browserType: Type text into an input field
-- browserExtract: Extract text from the page
-- browserGetLinks: Get all links from the page
-- browserSearchGoogle: Search Google for a query
+Available tools (use EXACT names below):\n`;
 
+  if (planMode) {
+    // In plan mode, only show read-only tools
+    const toolDescriptions: Record<string, string> = {
+      'readFile': 'readFile(filePath): Read file contents',
+      'listFiles': 'listFiles(dirPath): List directory contents',
+      'searchWeb': 'searchWeb(query, limit?): Search the web using DuckDuckGo',
+      'scrapeUrl': 'scrapeUrl(url): Scrape content from a URL',
+      'getNews': 'getNews(query?, limit?): Get latest news headlines',
+      'getGitStatus': 'getGitStatus(cwd?): Get git repository status',
+      'gitLog': 'gitLog(limit?, cwd?): View commit history',
+      'searchInFiles': 'searchInFiles(pattern, glob, options?): Search for pattern in files',
+      'findFiles': 'findFiles(glob, baseDir?): Find files by pattern',
+      'getFileTree': 'getFileTree(dir?, depth?): Get directory tree structure',
+      'findSymbolReferences': 'findSymbolReferences(symbol, dir?): Find all references to a code symbol',
+      'findSymbolDefinition': 'findSymbolDefinition(symbol, dir?): Find where a symbol is defined',
+      'detectProjectLanguage': 'detectProjectLanguage(dir?): Detect the programming language',
+      'getLinks': 'getLinks(): Get all links from the page',
+      'searchGoogle': 'searchGoogle(query): Search Google for a query'
+    };
+
+    for (const t of READ_ONLY_TOOLS) {
+      if (toolDescriptions[t]) {
+        basePrompt += `- ${toolDescriptions[t]}\n`;
+      }
+    }
+
+    basePrompt += `\nCRITICAL: You are currently running in PLAN MODE. You CANNOT execute shell commands, edit files, or perform any mutating actions. Your job is ONLY to explore the codebase, research the user's request, and formulate a step-by-step PLAN of what should be done. When you are done exploring, summarize your concrete plan.\n`;
+  } else {
+    // Show all tools
+    basePrompt += `- runCommand(command, options?): Execute shell commands
+- readFile(filePath): Read file contents
+- writeFile(filePath, content): Write to files
+- listFiles(dirPath): List directory contents
+- deleteFile(filePath): Delete files/directories
+- executePython(code): Run Python code
+- executeNode(code): Run Node.js code
+- searchWeb(query, limit?): Search the web using DuckDuckGo
+- scrapeUrl(url): Scrape content from a URL
+- getNews(query?, limit?): Get latest news headlines
+- getGitStatus(cwd?): Get git repository status
+- gitAdd(files, cwd?): Stage files for commit
+- gitAddAll(cwd?): Stage all changes
+- gitCommit(message, cwd?): Commit staged changes
+- gitPush(remote?, branch?, cwd?): Push to remote repository
+- gitLog(limit?, cwd?): View commit history
+- findAndReplace(pattern, replacement, glob, options?): Find and replace text across files
+- searchInFiles(pattern, glob, options?): Search for pattern in files
+- createFiles(files): Create multiple files at once (files: [{path, content}])
+- updateFiles(files): Update multiple files (files: [{path, content}])
+- deleteFiles(paths): Delete multiple files (paths: string[])
+- findFiles(glob, baseDir?): Find files by pattern
+- getFileTree(dir?, depth?): Get directory tree structure
+- findSymbolReferences(symbol, dir?): Find all references to a code symbol
+- renameSymbol(oldName, newName, dir?): Rename a symbol across the codebase
+- findSymbolDefinition(symbol, dir?): Find where a symbol is defined
+- detectProjectLanguage(dir?): Detect the programming language of a project
+- navigate(url): Navigate to a website URL
+- screenshot(path?): Take a screenshot of current page
+- click(selector): Click an element on the page
+- type(selector, text): Type text into an input field
+- extract(selector?): Extract text from the page
+- getLinks(): Get all links from the page
+- searchGoogle(query): Search Google for a query\n`;
+  }
+
+  basePrompt += `
 When you want to use a tool, respond with EXACTLY this format:
 [TOOL: tool_name]
 {"param1": "value1", "param2": "value2"}
 
 IMPORTANT: 
-- Use exact tool names from the list above
-- Parameters must be valid JSON
+- Use EXACT tool names from the list above (they are case-sensitive)
+- Parameters must be valid JSON with the correct parameter names shown in parentheses above
 - Do not add any text between [TOOL: ...] and the JSON
 
 For simple chat responses, just respond normally.
 
 Be concise in your reasoning. Focus on action.`;
+
+  return basePrompt;
+}
 
 /**
  * Parse tool call from LLM response
@@ -154,9 +210,10 @@ export class ReActEngine {
 
     // Load ECHO.md context if available
     const echoContext = await loadEchoContext();
+    const systemPromptText = getSystemPrompt(this.config.planMode);
     const systemContext = echoContext 
-      ? `${REACT_SYSTEM_PROMPT}\n\n${formatContextForPrompt(echoContext)}`
-      : REACT_SYSTEM_PROMPT;
+      ? `${systemPromptText}\n\n${formatContextForPrompt(echoContext)}`
+      : systemPromptText;
 
     // Add user message and prune if needed
     this.state.messages.push({
@@ -190,6 +247,18 @@ export class ReActEngine {
         if (toolCall) {
           spinner.stop();
           
+          if (this.config.planMode && !READ_ONLY_TOOLS.includes(toolCall.tool)) {
+            // Block tool execution securely at the engine level if LLM ignores prompt
+            this.state.messages.push({
+              role: 'user',
+              content: `[TOOL RESULT: ${toolCall.tool}]\nError: Cannot execute mutating tool '${toolCall.tool}' in Plan Mode. You are in read-only mode to explore and plan.`,
+              timestamp: Date.now(),
+            });
+            this.state.completedActions.push(`${toolCall.tool}: ✗ (Blocked by Plan Mode)`);
+            spinner.start();
+            continue;
+          }
+
           // Execute tool
           const actionResult = await this.executeTool(
             toolCall.tool,
@@ -257,7 +326,15 @@ export class ReActEngine {
     params: any,
     provider: ProviderName
   ): Promise<{ success: boolean; output: string } | null> {
-    const dangerousTools = ['runCommand', 'deleteFile', 'executePython', 'executeNode'];
+    // Dangerous tools that require HITL confirmation
+    // Covers both naming conventions the LLM might use
+    const dangerousTools = [
+      'runCommand', 'run_command',
+      'deleteFile', 'delete_file',
+      'executePython', 'execute_python',
+      'executeNode', 'execute_node',
+      'deleteFiles', 'delete_files',
+    ];
     const needsConfirmation = dangerousTools.includes(tool as string) && !this.yoloMode;
 
     if (needsConfirmation) {
@@ -293,8 +370,19 @@ export class ReActEngine {
     }
 
     try {
-      const paramValues = Object.values(params) as any[];
-      const result: any = await (toolFn as any)(...paramValues);
+      // Pass parameters as a single object so tools can extract by name,
+      // OR spread in correct order for tools expecting positional args.
+      // We try the object-style first; if the tool expects positional args
+      // we fall back to spreading values in the order the LLM provided.
+      let result: any;
+      try {
+        // Most tools accept positional params — spread in declaration order
+        const paramValues = Object.values(params) as any[];
+        result = await (toolFn as any)(...paramValues);
+      } catch (err: any) {
+        // If positional call fails, try passing the entire params object
+        result = await (toolFn as any)(params);
+      }
       
       // Format web search results for display
       if (tool === 'searchWeb' || tool === 'getNews') {

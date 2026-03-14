@@ -65,6 +65,90 @@ export class AnthropicProvider extends BaseProvider {
     }
   }
 
+  async generateStream(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse> {
+    const url = `${this.baseUrl}/messages`;
+
+    let systemPrompt = context || 'You are a helpful AI assistant.';
+    
+    const anthropicMessages = messages
+      .filter(msg => msg.role !== 'system')
+      .map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      }));
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: this.model,
+          max_tokens: 8192,
+          system: systemPrompt,
+          messages: anthropicMessages,
+          stream: true,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': this.apiKey,
+            'anthropic-version': this.apiVersion,
+          },
+          responseType: 'stream',
+          timeout: 60000,
+        }
+      );
+
+      let fullContent = '';
+
+      return new Promise((resolve, reject) => {
+        response.data.on('data', (chunk: Buffer) => {
+          const lines = chunk.toString('utf8').split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const data = trimmed.slice(6);
+              if (!data || data === '[DONE]') continue;
+              
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+                  const text = parsed.delta.text || '';
+                  if (text) {
+                    fullContent += text;
+                    if (onChunk) onChunk(text);
+                  }
+                }
+              } catch (e) {
+                // Ignore parse errors on partial chunks
+              }
+            }
+          }
+        });
+
+        response.data.on('end', () => {
+          resolve({
+            content: fullContent,
+            model: this.model,
+          });
+        });
+
+        response.data.on('error', (err: any) => {
+          reject(new Error(`Anthropic stream error: ${err.message}`));
+        });
+      });
+
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        const errorData = error.response?.data;
+        const errorMessage = typeof errorData === 'object' 
+          ? errorData?.error?.message || error.message
+          : error.message;
+        throw new Error(`Anthropic API error: ${errorMessage}`);
+      }
+      throw error;
+    }
+  }
+
   protected extractContent(response: unknown): string {
     const data = response as {
       content?: Array<{

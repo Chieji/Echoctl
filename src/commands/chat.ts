@@ -14,11 +14,12 @@ import { selectProviderForTask, getProviderSelectionReason } from '../utils/smar
 import { ProviderName, Message } from '../types/index.js';
 import { createReActEngine } from '../core/engine.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
+import { highlightMarkdown } from '../utils/highlight.js';
 
 /**
  * Format and display the AI response
  */
-function displayResponse(content: string, provider: ProviderName, tokens?: {
+export function displayResponse(content: string, provider: ProviderName, tokens?: {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
@@ -203,7 +204,7 @@ async function runAgentMode(
     }
     
     console.log('\n' + chalk.dim('─'.repeat(60)) + '\n');
-    console.log(result.result);
+    console.log(highlightMarkdown(result.result));
   } else {
     console.log(result.result);
   }
@@ -258,17 +259,34 @@ async function runStandardChat(
       ...updatedHistory,
     ];
 
-    const result = await chain.generateWithFailover(updatedMessages, undefined, provider);
-    spinner.stop();
+    let firstChunk = true;
 
-    // Save assistant response to session storage
-    await sessionStore.addMessage(session.id, 'assistant', result.response.content);
+    const result = await chain.generateWithFailover(
+      updatedMessages, 
+      undefined, 
+      provider,
+      (chunk: string) => {
+        if (!options.raw) {
+          if (firstChunk) {
+            spinner.stop();
+            console.log(''); // Newline before response starts
+            firstChunk = false;
+          }
+          process.stdout.write(chunk);
+        }
+      }
+    );
+    
+    if (firstChunk) spinner.stop();
 
     if (!options.raw) {
-      displayResponse(result.response.content, result.provider, result.response.usage);
+      console.log('\n'); // Ensure final newline after stream ends
     } else {
       console.log(result.response.content);
     }
+
+    // Save assistant response to session storage
+    await sessionStore.addMessage(session.id, 'assistant', result.response.content);
 
     if (result.failoverOccurred) {
       console.log(chalk.dim(`  (Failover: ${result.attempts.join(' → ')})\n`));

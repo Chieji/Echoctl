@@ -231,6 +231,42 @@ export async function browserClose(): Promise<void> {
 }
 
 /**
+ * Clean up browser on process exit to prevent Chromium leaks
+ */
+function registerCleanupHandlers(): void {
+  const cleanup = async () => {
+    try {
+      await browserClose();
+    } catch {
+      // Best-effort cleanup, don't throw during shutdown
+    }
+  };
+
+  // Handle normal exit
+  process.on('exit', () => {
+    if (browser) {
+      // Can't await in exit handler, force kill
+      browser.close().catch(() => {});
+    }
+  });
+
+  // Handle Ctrl+C
+  process.on('SIGINT', async () => {
+    await cleanup();
+    process.exit(0);
+  });
+
+  // Handle kill
+  process.on('SIGTERM', async () => {
+    await cleanup();
+    process.exit(0);
+  });
+}
+
+// Register cleanup on module load
+registerCleanupHandlers();
+
+/**
  * Browser tools export
  */
 export const browserTools = {
