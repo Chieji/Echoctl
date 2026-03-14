@@ -310,8 +310,9 @@ export {
   gitLog,
   createPullRequest as gitCreatePullRequest,
 } from './git.js';
-export * from './web.js';
 export * from './multi-file.js';
+export * from './voice.js';
+export * from './image.js';
 
 // Add web tools to the tools object for ReAct engine
 import { searchWeb, scrapeUrl, getNews } from './web.js';
@@ -347,6 +348,8 @@ export const multiFileTools = {
 import { findSymbolReferences, renameSymbol, findSymbolDefinition, detectProjectLanguage } from '../lsp/integration.js';
 import { browserNavigate, browserScreenshot, browserClick, browserType, browserExtract, browserGetLinks, browserSearchGoogle } from './browser.js';
 import { githubTools } from './github.js';
+import { voiceTools } from './voice.js';
+import { imageTools } from './image.js';
 
 export const lspTools = {
   findSymbolReferences,
@@ -365,6 +368,8 @@ export const browserTools = {
   searchGoogle: browserSearchGoogle,
 };
 
+export { voiceTools, imageTools };
+
 export type ToolName = 
   | keyof typeof tools 
   | keyof typeof webTools 
@@ -372,4 +377,6 @@ export type ToolName =
   | keyof typeof multiFileTools 
   | keyof typeof lspTools 
   | keyof typeof browserTools
-  | keyof typeof githubTools;
+  | keyof typeof githubTools
+  | keyof typeof voiceTools
+  | keyof typeof imageTools;

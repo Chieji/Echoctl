@@ -153,7 +153,7 @@ export class ConfigStore {
    * Remove API key for a provider
    */
   removeApiKey(provider: ProviderName): void {
-    this.store.set(`providers.${provider}`, undefined);
+    this.store.delete(`providers.${provider}` as any);
   }
 
   /**
@@ -198,7 +198,7 @@ export class ConfigStore {
    */
   isProviderConfigured(provider: ProviderName): boolean {
     const config = this.store.get(`providers.${provider}`) as ProviderConfig | undefined;
-    return !!config?.apiKey && config.apiKey.length > 0;
+    return !!config?.apiKey && config.apiKey.trim().length > 0;
   }
 
   /**

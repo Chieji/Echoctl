@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const BoxSDK = require('box-node-sdk');
+const BoxSDK = require('box-node-sdk').default || require('box-node-sdk').BoxSDK || require('box-node-sdk');
 import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { getConfig } from '../../utils/config.js';

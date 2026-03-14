@@ -5,7 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
-import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, githubTools, ToolName } from '../tools/executor.js';
+import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, githubTools, voiceTools, imageTools, ToolName } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -21,6 +21,8 @@ const staticToolRegistry = {
   ...lspTools,
   ...browserTools,
   ...githubTools,
+  ...voiceTools,
+  ...imageTools,
 };
 
 export interface EngineConfig {
@@ -136,7 +138,11 @@ Available tools (use EXACT names below):\n`;
 - githubCreatePullRequest(owner, repo, title, head, base?, body?): Create a GitHub PR
 - githubCreateIssue(owner, repo, title, body?, labels?): Create a GitHub issue
 - githubSearchRepos(query): Search for GitHub repositories
-- githubGetUser(): Get information about the linked GitHub user\n`;
+- githubGetUser(): Get information about the linked GitHub user
+- transcribe(audioPath): Transcribe audio from a file
+- speak(text, voice?): Convert text to speech
+- generate(prompt, size?): Generate an image from a prompt
+- analyze(imageUrl, prompt?): Analyze an image (Vision)\n`;
 
     // Add dynamic (MCP) tools
     Object.entries(dynamicTools).forEach(([name, description]) => {

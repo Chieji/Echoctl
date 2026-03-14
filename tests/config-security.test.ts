@@ -10,6 +10,7 @@ describe('ConfigStore - Security', () => {
 
   beforeEach(() => {
     config = new ConfigStore();
+    config.reset();
   });
 
   describe('checkRateLimit', () => {
@@ -115,6 +116,7 @@ describe('ConfigStore - Basic Operations', () => {
 
   beforeEach(() => {
     config = new ConfigStore();
+    config.reset();
   });
 
   describe('setApiKey', () => {

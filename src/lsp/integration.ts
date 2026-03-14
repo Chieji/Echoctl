@@ -200,12 +200,15 @@ export async function findSymbolDefinition(
 ): Promise<LSPSymbol | null> {
   try {
     // Look for function/class definitions
-    const patterns = [
       `function ${symbolName}\\s*\\(`,
       `class ${symbolName}\\s*`,
+      `interface ${symbolName}\\s*`,
+      `type ${symbolName}\\s*=`,
       `const ${symbolName}\\s*=`,
       `let ${symbolName}\\s*=`,
+      `var ${symbolName}\\s*=`,
       `def ${symbolName}\\s*\\(`,  // Python
+      `@${symbolName}`,            // Decorators
     ];
     
     for (const pattern of patterns) {
