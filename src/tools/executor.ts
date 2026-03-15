@@ -368,6 +368,12 @@ export const browserTools = {
   searchGoogle: browserSearchGoogle,
 };
 
+import { systemTools } from './system.js';
+
+export const allSystemTools = {
+  ...systemTools,
+};
+
 export { voiceTools, imageTools };
 
 export type ToolName = 
@@ -379,4 +385,5 @@ export type ToolName =
   | keyof typeof browserTools
   | keyof typeof githubTools
   | keyof typeof voiceTools
-  | keyof typeof imageTools;
+  | keyof typeof imageTools
+  | keyof typeof allSystemTools;
