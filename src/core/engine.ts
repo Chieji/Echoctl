@@ -170,10 +170,18 @@ Be concise in your reasoning. Focus on action.`;
 }
 
 /**
- * Parse tool call from LLM response
+ * Parse tool call from LLM response.
+ * Resilient to common LLM output variations:
+ *   - Tool call inside markdown code fences
+ *   - Extra whitespace or newlines between [TOOL:] and JSON
+ *   - Surrounding text before/after the tool call
  */
 function parseToolCall(content: string): { tool: ToolName; params: any } | null {
-  const toolMatch = content.match(/\[TOOL:\s*(\w+)\]\s*\n?({[\s\S]*})/);
+  // Strip markdown code fences if the LLM wraps the tool call in them
+  let cleaned = content.replace(/```(?:json|text|plaintext)?\s*/gi, '').replace(/```/g, '');
+
+  // Match [TOOL: toolName] followed by a JSON object (possibly with whitespace/newlines)
+  const toolMatch = cleaned.match(/\[TOOL:\s*(\w+)\]\s*\n?\s*(\{[\s\S]*?\})\s*(?:\n|$)/);
   
   if (toolMatch) {
     try {
@@ -181,6 +189,17 @@ function parseToolCall(content: string): { tool: ToolName; params: any } | null 
       const params = JSON.parse(toolMatch[2]);
       return { tool, params };
     } catch {
+      // JSON parse failed — try to extract just the first valid JSON object
+      const jsonStart = toolMatch[2].indexOf('{');
+      const jsonEnd = toolMatch[2].lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        try {
+          const params = JSON.parse(toolMatch[2].substring(jsonStart, jsonEnd + 1));
+          return { tool: toolMatch[1] as ToolName, params };
+        } catch {
+          return null;
+        }
+      }
       return null;
     }
   }

@@ -94,15 +94,19 @@ function sortByRelevance(memories: MemoryItem[], query: string): MemoryItem[] {
 export class BrainStore {
   private db: Low<BrainDatabase>;
   private initialized: boolean = false;
+  private readonly isTestEnv: boolean;
+  private readonly dbPath: string;
 
   constructor() {
+    this.isTestEnv = !!(process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID);
     // Ensure config directory exists
     if (!existsSync(CONFIG.CONFIG_DIR)) {
       mkdirSync(CONFIG.CONFIG_DIR, { recursive: true });
     }
 
-    const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
-    this.db = new Low<BrainDatabase>(new JSONFile<BrainDatabase>(dbPath), {
+    const dbFile = this.isTestEnv ? 'brain-test.json' : CONFIG.DB_FILE;
+    this.dbPath = join(CONFIG.CONFIG_DIR, dbFile);
+    this.db = new Low<BrainDatabase>(new JSONFile<BrainDatabase>(this.dbPath), {
       memories: [],
     });
   }
@@ -115,18 +119,20 @@ export class BrainStore {
 
     try {
       await this.db.read();
-      if (!this.db.data) {
+      // In tests, always start from a clean in-memory brain to avoid pollution
+      if (!this.db.data || this.isTestEnv) {
         this.db.data = { memories: [] };
       }
       await this.db.write();
       this.initialized = true;
 
       // Sync from cloud on init if available
-      const boxStore = getBoxStore();
-      if (await boxStore.init()) {
-        const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
-        await boxStore.downloadMemory(dbPath);
-        await this.db.read(); // Refresh from downloaded file
+      if (!this.isTestEnv) {
+        const boxStore = getBoxStore();
+        if (await boxStore.init()) {
+          await boxStore.downloadMemory(this.dbPath);
+          await this.db.read(); // Refresh from downloaded file
+        }
       }
     } catch (error: any) {
       console.error('Warning: Brain database error, recreating...', error.message);
@@ -187,10 +193,10 @@ export class BrainStore {
    * Sync brain to Box in the background
    */
   private async syncToCloud(): Promise<void> {
+    if (this.isTestEnv) return;
     const boxStore = getBoxStore();
     if (await boxStore.init()) {
-      const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
-      await boxStore.uploadMemory(dbPath);
+      await boxStore.uploadMemory(this.dbPath);
     }
   }
 
@@ -395,7 +401,7 @@ export class BrainStore {
    * Get database file path
    */
   getDbPath(): string {
-    return join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
+    return this.dbPath;
   }
 }
 

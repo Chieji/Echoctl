@@ -160,8 +160,9 @@ export async function writeFileTool(
 ): Promise<ToolResult> {
   try {
     const absolutePath = resolve(filePath);
-    // Ensure directory exists
-    await runCommand(`mkdir -p "${dirname(absolutePath)}"`);
+    // Use Node.js mkdir instead of shell command to avoid injection
+    const { mkdir } = await import('fs/promises');
+    await mkdir(dirname(absolutePath), { recursive: true });
     await writeFile(absolutePath, content, 'utf-8');
     return {
       success: true,

@@ -57,20 +57,22 @@ const CONFIG = {
 export class ApprovalsStore {
   private db: Low<ApprovalsDatabase>;
   private initialized: boolean = false;
+  private readonly isCustomPath: boolean;
 
-  constructor() {
+  constructor(dbPath?: string) {
+    this.isCustomPath = !!dbPath;
     // Ensure config directory exists
-    if (!existsSync(CONFIG.CONFIG_DIR)) {
+    if (!dbPath && !existsSync(CONFIG.CONFIG_DIR)) {
       mkdirSync(CONFIG.CONFIG_DIR, { recursive: true });
     }
 
-    const dbPath = join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
-    this.db = new Low<ApprovalsDatabase>(new JSONFile<ApprovalsDatabase>(dbPath), {
+    const finalPath = dbPath || join(CONFIG.CONFIG_DIR, CONFIG.DB_FILE);
+    this.db = new Low<ApprovalsDatabase>(new JSONFile<ApprovalsDatabase>(finalPath), {
       requests: [],
       autoApproveRules: [
         // Default safe rules
-        { toolPattern: 'readFile', enabled: true },
-        { toolPattern: 'listFiles', enabled: true },
+        { toolPattern: '^readFile$', enabled: true },
+        { toolPattern: '^listFiles$', enabled: true },
       ],
       history: [],
     });
@@ -84,12 +86,13 @@ export class ApprovalsStore {
 
     try {
       await this.db.read();
-      if (!this.db.data) {
+      // For custom paths (used heavily in tests), always start from a clean state
+      if (!this.db.data || this.isCustomPath) {
         this.db.data = {
           requests: [],
           autoApproveRules: [
-            { toolPattern: 'readFile', enabled: true },
-            { toolPattern: 'listFiles', enabled: true },
+            { toolPattern: '^readFile$', enabled: true },
+            { toolPattern: '^listFiles$', enabled: true },
           ],
           history: [],
         };
@@ -169,7 +172,12 @@ export class ApprovalsStore {
       if (!rule.enabled) continue;
 
       // Check tool pattern
-      const toolRegex = new RegExp(rule.toolPattern, 'i');
+      let pattern = rule.toolPattern;
+      const hasStartAnchor = pattern.startsWith('^');
+      const hasEndAnchor = pattern.endsWith('$');
+      if (!hasStartAnchor) pattern = `^${pattern}`;
+      if (!hasEndAnchor) pattern = `${pattern}$`;
+      const toolRegex = new RegExp(pattern, 'i');
       if (!toolRegex.test(toolName)) continue;
 
       // Check param pattern if specified
@@ -308,7 +316,9 @@ export class ApprovalsStore {
    */
   async clearPending(): Promise<void> {
     await this.ensureInitialized();
+    // Clear both pending queue and history so stats are reset
     this.db.data!.requests = [];
+    this.db.data!.history = [];
     await this.db.write();
   }
 

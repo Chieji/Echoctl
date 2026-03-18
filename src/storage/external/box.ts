@@ -16,10 +16,20 @@ export class BoxStore {
   private initialized: boolean = false;
 
   constructor() {
-    this.sdk = new BoxSDK({
-      clientID: '',
-      clientSecret: '',
-    });
+    try {
+      this.sdk = new BoxSDK({
+        clientID: '',
+        clientSecret: '',
+      });
+    } catch (error: any) {
+      // If Box SDK is not a valid constructor (or missing), gracefully disable cloud sync
+      console.error(
+        chalk.yellow(
+          `⚠ Box SDK not available, disabling Box cloud sync: ${error?.message ?? String(error)}`
+        )
+      );
+      this.sdk = null;
+    }
   }
 
   /**
@@ -27,6 +37,10 @@ export class BoxStore {
    */
   async init(): Promise<boolean> {
     const config = getConfig().getBoxConfig();
+    // If SDK failed to initialize, treat Box sync as disabled
+    if (!this.sdk) {
+      return false;
+    }
     if (!config || !config.enabled || !config.developerToken) {
       return false;
     }

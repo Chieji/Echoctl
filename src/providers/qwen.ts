@@ -25,7 +25,7 @@ export class QwenProvider extends BaseProvider {
   async generateResponse(messages: Message[], context?: string): Promise<ProviderResponse> {
     const url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
 
-    const systemPrompt = context 
+    const systemPrompt = context
       ? `You are a helpful AI assistant. ${context}`
       : 'You are a helpful AI assistant.';
 
@@ -59,6 +59,84 @@ export class QwenProvider extends BaseProvider {
         usage: this.extractUsage(response.data),
         model: response.data.output?.model || this.model,
       };
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(`Qwen API error: ${error.response?.data?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async generateStream(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse> {
+    const url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+
+    const systemPrompt = context
+      ? `You are a helpful AI assistant. ${context}`
+      : 'You are a helpful AI assistant.';
+
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(msg => ({ role: msg.role, content: msg.content })),
+    ];
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: this.model,
+          input: { messages: formattedMessages },
+          parameters: {
+            result_format: 'message',
+          },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+            'X-DashScope-SSE': 'enable',
+          },
+          responseType: 'stream',
+          timeout: 60000,
+        }
+      );
+
+      let fullContent = '';
+
+      return new Promise((resolve, reject) => {
+        response.data.on('data', (chunk: Buffer) => {
+          const lines = chunk.toString('utf8').split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+              const data = trimmed.slice(5).trim();
+              if (!data || data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const text = parsed.output?.choices?.[0]?.message?.content || '';
+                if (text) {
+                  fullContent += text;
+                  if (onChunk) onChunk(text);
+                }
+              } catch (e) {
+                // Ignore parse errors on partial chunks
+              }
+            }
+          }
+        });
+
+        response.data.on('end', () => {
+          resolve({
+            content: fullContent,
+            model: this.model,
+          });
+        });
+
+        response.data.on('error', (err: any) => {
+          reject(new Error(`Qwen stream error: ${err.message}`));
+        });
+      });
+
     } catch (error) {
       if (error instanceof AxiosError) {
         throw new Error(`Qwen API error: ${error.response?.data?.message || error.message}`);

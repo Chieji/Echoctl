@@ -18,6 +18,7 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 export interface Message {
   role: MessageRole;
   content: string;
+  imageUrl?: string; // Base64 or URL for vision tasks
   timestamp: number;
 }
 

@@ -23,10 +23,23 @@ export class GeminiProvider extends BaseProvider {
       ? { role: 'user', parts: [{ text: `System: ${context}` }] }
       : null;
 
-    const geminiMessages = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
+    const geminiMessages = messages.map(msg => {
+      const parts: any[] = [{ text: msg.content }];
+      if (msg.imageUrl && msg.imageUrl.startsWith('data:image/')) {
+        const [mimePart, base64Data] = msg.imageUrl.split(';base64,');
+        const mimeType = mimePart.replace('data:', '');
+        parts.push({
+          inline_data: {
+            mime_type: mimeType,
+            data: base64Data
+          }
+        });
+      }
+      return {
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts,
+      };
+    });
 
     const contentParts = systemInstruction 
       ? [systemInstruction, ...geminiMessages]
@@ -75,10 +88,23 @@ export class GeminiProvider extends BaseProvider {
       ? { role: 'user', parts: [{ text: `System: ${context}` }] }
       : null;
 
-    const geminiMessages = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
+    const geminiMessages = messages.map(msg => {
+      const parts: any[] = [{ text: msg.content }];
+      if (msg.imageUrl && msg.imageUrl.startsWith('data:image/')) {
+        const [mimePart, base64Data] = msg.imageUrl.split(';base64,');
+        const mimeType = mimePart.replace('data:', '');
+        parts.push({
+          inline_data: {
+            mime_type: mimeType,
+            data: base64Data
+          }
+        });
+      }
+      return {
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts,
+      };
+    });
 
     const contentParts = systemInstruction 
       ? [systemInstruction, ...geminiMessages]

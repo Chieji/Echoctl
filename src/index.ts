@@ -20,6 +20,7 @@ import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninst
 import { launchDashboard } from './commands/tui.js';
 import { setupMcpCommand } from './commands/mcp.js';
 import { setupMountCommand } from './commands/mount.js';
+import { registerConnectCommand } from './commands/connect.js';
 import { render } from 'ink';
 import { StartupSequence } from './tui/startup.js';
 import { Dashboard } from './tui/echomen-dashboard.js';
@@ -28,10 +29,9 @@ import { getConfig } from './utils/config.js';
 import { ProviderName } from './types/index.js';
 import { displayStartupSequence } from './utils/banner.js';
 
-const packageJson = {
-  name: 'echo-ai-cli',
-  version: '1.0.0',
-};
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
 
 /**
  * Display welcome banner
@@ -710,6 +710,7 @@ function createCLI(): Command {
 
   setupMcpCommand(program);
   setupMountCommand(program);
+  registerConnectCommand(program);
 
 
   // ============================================================================

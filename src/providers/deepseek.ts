@@ -18,7 +18,7 @@ export class DeepSeekProvider extends BaseProvider {
   async generateResponse(messages: Message[], context?: string): Promise<ProviderResponse> {
     const url = `${this.baseUrl}/chat/completions`;
 
-    const systemPrompt = context 
+    const systemPrompt = context
       ? `You are a helpful AI assistant. ${context}`
       : 'You are a helpful AI assistant.';
 
@@ -50,6 +50,83 @@ export class DeepSeekProvider extends BaseProvider {
         usage: this.extractUsage(response.data),
         model: response.data.model,
       };
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        throw new Error(`DeepSeek API error: ${error.response?.data?.error?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async generateStream(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse> {
+    const url = `${this.baseUrl}/chat/completions`;
+
+    const systemPrompt = context
+      ? `You are a helpful AI assistant. ${context}`
+      : 'You are a helpful AI assistant.';
+
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(msg => ({ role: msg.role, content: msg.content })),
+    ];
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          model: this.model,
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 4096,
+          stream: true,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+          responseType: 'stream',
+          timeout: 60000,
+        }
+      );
+
+      let fullContent = '';
+
+      return new Promise((resolve, reject) => {
+        response.data.on('data', (chunk: Buffer) => {
+          const lines = chunk.toString('utf8').split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const data = trimmed.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const text = parsed.choices?.[0]?.delta?.content || '';
+                if (text) {
+                  fullContent += text;
+                  if (onChunk) onChunk(text);
+                }
+              } catch (e) {
+                // Ignore parse errors on partial chunks
+              }
+            }
+          }
+        });
+
+        response.data.on('end', () => {
+          resolve({
+            content: fullContent,
+            model: this.model,
+          });
+        });
+
+        response.data.on('error', (err: any) => {
+          reject(new Error(`DeepSeek stream error: ${err.message}`));
+        });
+      });
+
     } catch (error) {
       if (error instanceof AxiosError) {
         throw new Error(`DeepSeek API error: ${error.response?.data?.error?.message || error.message}`);

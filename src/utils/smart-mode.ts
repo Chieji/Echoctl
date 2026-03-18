@@ -76,6 +76,7 @@ const TASK_KEYWORDS: Record<TaskType, string[]> = {
   ],
   nuance: [
     'ethical',
+    'ethics',
     'moral',
     'philosophy',
     'opinion',
@@ -117,7 +118,6 @@ const PROVIDER_FOR_TASK: Record<TaskType, ProviderName> = {
  */
 export function classifyTask(input: string): TaskType {
   const lowerInput = input.toLowerCase();
-  
   const scores: Record<TaskType, number> = {
     code: 0,
     creative: 0,
@@ -139,7 +139,11 @@ export function classifyTask(input: string): TaskType {
   let classified: TaskType = 'general';
 
   for (const [taskType, score] of Object.entries(scores)) {
-    if (score > maxScore) {
+    // Weight code tasks higher if equal
+    const currentWeight = taskType === 'code' ? score * 1.5 : score;
+    const maxWeight = classified === 'code' ? maxScore * 1.5 : maxScore;
+
+    if (currentWeight > maxWeight) {
       maxScore = score;
       classified = taskType as TaskType;
     }

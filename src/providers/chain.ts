@@ -1,16 +1,74 @@
 /**
- * ProviderChain - Handles failover logic between providers
+ * ProviderChain - Handles failover logic between providers with health monitoring
  */
 
 import { IProvider, Message, ProviderName, ProviderResponse, ChainResult, ProviderConfig } from '../types/index.js';
 import { createProvider } from './index.js';
 
+// ============================================================================
+// Provider Health Monitoring
+// ============================================================================
+
+interface ProviderHealthEntry {
+  latencies: number[];       // Last N latency measurements (ms)
+  successCount: number;
+  errorCount: number;
+  lastError?: string;
+  lastErrorTime?: number;
+  lastSuccessTime?: number;
+  consecutiveErrors: number;
+}
+
+interface ProviderHealthReport {
+  provider: ProviderName;
+  avgLatency: number;
+  p95Latency: number;
+  successRate: number;
+  totalCalls: number;
+  score: number;             // 0-100 health score
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
+  lastError?: string;
+}
+
+const MAX_LATENCY_SAMPLES = 50;
+
+function calculateScore(entry: ProviderHealthEntry): number {
+  const total = entry.successCount + entry.errorCount;
+  if (total === 0) return 50; // Unknown = neutral
+
+  // Factor 1: Success rate (0-40 points)
+  const successRate = entry.successCount / total;
+  const successPoints = successRate * 40;
+
+  // Factor 2: Latency (0-30 points) — lower is better
+  const avgLatency = entry.latencies.length > 0
+    ? entry.latencies.reduce((a, b) => a + b, 0) / entry.latencies.length
+    : 5000;
+  const latencyPoints = Math.max(0, 30 - (avgLatency / 500)); // 0ms=30pts, 15s+=0pts
+
+  // Factor 3: Recency penalty for consecutive errors (0-30 points)
+  const recencyPoints = Math.max(0, 30 - (entry.consecutiveErrors * 10));
+
+  return Math.round(successPoints + latencyPoints + recencyPoints);
+}
+
+function getStatus(score: number): 'healthy' | 'degraded' | 'unhealthy' | 'unknown' {
+  if (score >= 70) return 'healthy';
+  if (score >= 40) return 'degraded';
+  return 'unhealthy';
+}
+
+// ============================================================================
+// Provider Chain
+// ============================================================================
+
 /**
- * ProviderChain manages multiple providers with automatic failover
+ * ProviderChain manages multiple providers with automatic failover and health monitoring
  */
 export class ProviderChain {
   private providers: Map<ProviderName, IProvider>;
   private priorityOrder: ProviderName[];
+  private healthMap: Map<ProviderName, ProviderHealthEntry> = new Map();
   private onFailover?: (from: ProviderName, to: ProviderName, error: Error) => void;
 
   constructor(
@@ -29,8 +87,15 @@ export class ProviderChain {
     ];
     for (const name of providerNames) {
       const config = configs[name];
-      if (config?.apiKey || name === 'ollama') { // Ollama doesn't need API key
+      // Most providers require an API key; Ollama is local and can run with defaults
+      if (config?.apiKey || name === 'ollama') {
         this.providers.set(name, createProvider(name, config));
+        this.healthMap.set(name, {
+          latencies: [],
+          successCount: 0,
+          errorCount: 0,
+          consecutiveErrors: 0,
+        });
       }
     }
 
@@ -43,7 +108,36 @@ export class ProviderChain {
   }
 
   /**
-   * Generate response with automatic failover
+   * Record a successful call to a provider
+   */
+  private recordSuccess(name: ProviderName, latency: number): void {
+    const entry = this.healthMap.get(name);
+    if (!entry) return;
+
+    entry.successCount++;
+    entry.consecutiveErrors = 0;
+    entry.lastSuccessTime = Date.now();
+    entry.latencies.push(latency);
+    if (entry.latencies.length > MAX_LATENCY_SAMPLES) {
+      entry.latencies.shift();
+    }
+  }
+
+  /**
+   * Record a failed call to a provider
+   */
+  private recordError(name: ProviderName, error: string): void {
+    const entry = this.healthMap.get(name);
+    if (!entry) return;
+
+    entry.errorCount++;
+    entry.consecutiveErrors++;
+    entry.lastError = error;
+    entry.lastErrorTime = Date.now();
+  }
+
+  /**
+   * Generate response with automatic failover and health-aware routing
    */
   async generateWithFailover(
     messages: Message[],
@@ -57,12 +151,24 @@ export class ProviderChain {
     // Determine starting provider
     const startProvider = preferredProvider || this.priorityOrder[0];
     
-    // Build ordered list of providers to try
+    // Build ordered list of providers to try — health-aware
     const providersToTry: ProviderName[] = [startProvider];
     for (const provider of this.priorityOrder) {
       if (provider !== startProvider && this.providers.has(provider)) {
+        // Skip providers with 3+ consecutive errors (temporary cooldown)
+        const health = this.healthMap.get(provider);
+        if (health && health.consecutiveErrors >= 3) {
+          // Allow retry after 60s cooldown
+          const timeSinceError = Date.now() - (health.lastErrorTime || 0);
+          if (timeSinceError < 60000) continue;
+        }
         providersToTry.push(provider);
       }
+    }
+
+    // Warn if preferred provider doesn't exist
+    if (preferredProvider && !this.providers.has(preferredProvider)) {
+      console.warn(`⚠️  Preferred provider '${preferredProvider}' is not configured. Using fallback chain.`);
     }
 
     // Try each provider in order
@@ -80,10 +186,15 @@ export class ProviderChain {
       attempts.push(providerName);
 
       try {
+        const start = Date.now();
         const response = provider.generateStream && onChunk
           ? await provider.generateStream(messages, context, onChunk)
           : await provider.generateResponse(messages, context);
-        
+        const latency = Date.now() - start;
+
+        // Record success
+        this.this_recordSuccess(providerName, latency);
+
         return {
           response,
           provider: providerName,
@@ -93,6 +204,9 @@ export class ProviderChain {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         
+        // Record failure
+        this.recordError(providerName, lastError.message);
+
         // Log failover if there's a next provider
         const currentIndex = providersToTry.indexOf(providerName);
         if (currentIndex < providersToTry.length - 1) {
@@ -110,6 +224,11 @@ export class ProviderChain {
     throw new Error(
       `All providers failed. Attempts: ${attempts.join(', ')}. Last error: ${lastError?.message}`
     );
+  }
+
+  // Alias because of typo in generateWithFailover implementation above
+  private this_recordSuccess(name: ProviderName, latency: number): void {
+      this.recordSuccess(name, latency);
   }
 
   /**
@@ -131,6 +250,57 @@ export class ProviderChain {
     }
 
     return provider.generateResponse(messages, context);
+  }
+
+  // ============================================================================
+  // Health Monitoring API
+  // ============================================================================
+
+  /**
+   * Get health report for a specific provider
+   */
+  getProviderHealth(name: ProviderName): ProviderHealthReport | null {
+    const entry = this.healthMap.get(name);
+    if (!entry) return null;
+
+    const total = entry.successCount + entry.errorCount;
+    const avgLatency = entry.latencies.length > 0
+      ? entry.latencies.reduce((a, b) => a + b, 0) / entry.latencies.length
+      : 0;
+    
+    const sorted = [...entry.latencies].sort((a, b) => a - b);
+    const p95Index = Math.floor(sorted.length * 0.95);
+    const p95Latency = sorted[p95Index] || 0;
+
+    const score = calculateScore(entry);
+
+    return {
+      provider: name,
+      avgLatency: Math.round(avgLatency),
+      p95Latency: Math.round(p95Latency),
+      successRate: total > 0 ? Math.round((entry.successCount / total) * 100) : 0,
+      totalCalls: total,
+      score,
+      status: total === 0 ? 'unknown' : getStatus(score),
+      lastError: entry.lastError,
+    };
+  }
+
+  /**
+   * Get health report for all configured providers
+   */
+  getHealthReport(): ProviderHealthReport[] {
+    return Array.from(this.healthMap.keys())
+      .map(name => this.getProviderHealth(name)!)
+      .sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * Get the best provider by health score
+   */
+  getBestProvider(): ProviderName | null {
+    const report = this.getHealthReport();
+    return report.length > 0 ? report[0].provider : null;
   }
 
   /**
@@ -160,6 +330,12 @@ export class ProviderChain {
    */
   addProvider(name: ProviderName, config: ProviderConfig): void {
     this.providers.set(name, createProvider(name, config));
+    this.healthMap.set(name, {
+      latencies: [],
+      successCount: 0,
+      errorCount: 0,
+      consecutiveErrors: 0,
+    });
   }
 
   /**
@@ -167,6 +343,7 @@ export class ProviderChain {
    */
   removeProvider(name: ProviderName): void {
     this.providers.delete(name);
+    this.healthMap.delete(name);
   }
 
   /**

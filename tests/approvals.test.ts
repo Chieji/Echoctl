@@ -9,7 +9,8 @@ describe('ApprovalsStore', () => {
   let store: ApprovalsStore;
 
   beforeEach(async () => {
-    store = new ApprovalsStore();
+    const testDbPath = '/tmp/approvals-test.json';
+    store = new ApprovalsStore(testDbPath);
     await store.init();
     await store.clearPending();
   });
