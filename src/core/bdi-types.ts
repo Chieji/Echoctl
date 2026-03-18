@@ -2,6 +2,16 @@
  * BDI Type Definitions
  */
 
+export type CognitiveState =
+  | 'IDLE'
+  | 'PERCEIVE'
+  | 'REASON'
+  | 'PLAN'
+  | 'ACT'
+  | 'OBSERVE'
+  | 'REFLECT'
+  | 'LEARN';
+
 export interface Beliefs {
   memories: string[];
   capabilities: string[];

@@ -192,7 +192,20 @@ async function runAgentMode(
     console.log(chalk.yellow.bold('⚠️  YOLO MODE: Executing commands without confirmation\n'));
   }
 
-  const result = await engine.run(message);
+  const spinner = ora(chalk.dim('Agent thinking...')).start();
+  let firstChunk = true;
+  const result = await engine.run(message, (chunk: string) => {
+    if (!options.raw) {
+      if (firstChunk) {
+        spinner.stop();
+        console.log(''); // Newline
+        firstChunk = false;
+      }
+      process.stdout.write(chunk);
+    }
+  });
+
+  if (firstChunk) spinner.stop();
 
   if (!options.raw) {
     console.log('\n' + chalk.dim('─'.repeat(60)));

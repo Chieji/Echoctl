@@ -8,22 +8,14 @@ import { ViewMode } from '../tui/types.js';
 import { ReActEngine, createReActEngine } from '../core/engine.js';
 import { createDefaultChain, ProviderChain } from '../providers/chain.js';
 import { getConfig } from '../utils/config.js';
-
-export type CognitiveState =
-  | 'IDLE'
-  | 'PERCEIVE'
-  | 'REASON'
-  | 'PLAN'
-  | 'ACT'
-  | 'OBSERVE'
-  | 'REFLECT'
-  | 'LEARN';
+import { CognitiveState } from '../core/bdi-types.js';
 
 export interface EngineState {
   state: CognitiveState;
   currentTask?: string;
   progress: number;
   isProcessing: boolean;
+  actions: string[];
 }
 
 const MODE_TO_ENGINE: Record<ViewMode, 'chat' | 'agent'> = {
@@ -39,6 +31,7 @@ export function useCognitiveEngine() {
     state: 'IDLE',
     progress: 0,
     isProcessing: false,
+    actions: [],
   });
 
   const engineRef = useRef<ReActEngine | null>(null);
@@ -64,60 +57,56 @@ export function useCognitiveEngine() {
         ...prev,
         isProcessing: true,
         currentTask: input,
-        state: 'PERCEIVE',
-        progress: 0.1,
+        actions: [],
       }));
+
+      const stageProgress: Record<CognitiveState, number> = {
+        IDLE: 0,
+        PERCEIVE: 0.1,
+        REASON: 0.25,
+        PLAN: 0.4,
+        ACT: 0.55,
+        OBSERVE: 0.7,
+        REFLECT: 0.85,
+        LEARN: 1,
+      };
+
+      const addAction = (action: string) => {
+        setEngineState(prev => ({
+          ...prev,
+          actions: [...prev.actions, action],
+        }));
+      };
+
+      const setStage = (stage: CognitiveState) => {
+        setEngineState(prev => ({
+          ...prev,
+          state: stage,
+          progress: stageProgress[stage] ?? prev.progress,
+        }));
+      };
 
       try {
         const engine = getEngine();
-        const engineMode = MODE_TO_ENGINE[mode];
 
-        // Simulate cognitive states with delays
-        // PERCEIVE
-        setEngineState(prev => ({ ...prev, state: 'PERCEIVE', progress: 0.2 }));
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Update stage based on engine lifecycle
+        setStage('PERCEIVE');
+        const result = await engine.run(input, undefined, setStage, addAction);
 
-        // REASON
-        setEngineState(prev => ({ ...prev, state: 'REASON', progress: 0.3 }));
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // PLAN
-        setEngineState(prev => ({ ...prev, state: 'PLAN', progress: 0.4 }));
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // ACT - Run the actual engine
-        setEngineState(prev => ({ ...prev, state: 'ACT', progress: 0.5 }));
-        const result = await engine.run(input);
-
-        // OBSERVE
-        setEngineState(prev => ({ ...prev, state: 'OBSERVE', progress: 0.8 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // REFLECT
-        setEngineState(prev => ({ ...prev, state: 'REFLECT', progress: 0.9 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // LEARN
-        setEngineState(prev => ({ ...prev, state: 'LEARN', progress: 1.0 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Return to IDLE
-        setEngineState({
-          state: 'IDLE',
-          progress: 0,
-          isProcessing: false,
-          currentTask: undefined,
-        });
+        // Ensure final state updates
+        setStage('LEARN');
 
         return result.result || 'Task completed.';
       } catch (error: any) {
-        setEngineState({
+        return `Error: ${error.message}`;
+      } finally {
+        setEngineState(prev => ({
+          ...prev,
           state: 'IDLE',
           progress: 0,
           isProcessing: false,
           currentTask: undefined,
-        });
-        return `Error: ${error.message}`;
+        }));
       }
     },
     [getEngine]
@@ -129,6 +118,7 @@ export function useCognitiveEngine() {
     progress: engineState.progress,
     isProcessing: engineState.isProcessing,
     currentTask: engineState.currentTask,
+    actions: engineState.actions,
   };
 }
 

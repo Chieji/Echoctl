@@ -1,5 +1,5 @@
 import { Beliefs, Intention } from './bdi-types.js';
-import { IntentExtractor } from '../nlu/intent.ts';
+import { IntentExtractor } from '../nlu/intent';
 import { ProviderChain } from '../providers/chain.js';
 
 /**

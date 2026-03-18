@@ -171,6 +171,17 @@ export class EchoBridge {
     });
   }
 
+  /**
+   * Send a streaming AI chunk to the web dashboard.
+   */
+  sendChunk(chunk: string): void {
+    this.send({
+      type: 'streaming_chunk',
+      source: 'cli',
+      payload: { chunk }
+    });
+  }
+
   private send(partial: Partial<any>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 

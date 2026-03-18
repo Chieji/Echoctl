@@ -5,6 +5,7 @@
 
 import { ProviderChain } from '../providers/chain.js';
 import { Message, ProviderName } from '../types/index.js';
+import { CognitiveState } from './bdi-types.js';
 import { tools, webTools, gitTools, multiFileTools, lspTools, browserTools, githubTools, voiceTools, imageTools, ToolName } from '../tools/executor.js';
 import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader.js';
 import chalk from 'chalk';
@@ -237,9 +238,19 @@ export class ReActEngine {
   /**
    * Run the ReAct loop
    */
-  async run(task: string): Promise<{ success: boolean; result: string; actions: string[] }> {
+  async run(
+    task: string,
+    onChunk?: (chunk: string) => void,
+    onStage?: (stage: CognitiveState) => void,
+    onAction?: (action: string) => void
+  ): Promise<{ success: boolean; result: string; actions: string[] }> {
     const spinner = ora({ text: 'Starting engine...', spinner: 'dots' }).start();
-    
+
+    const emitStage = (stage: CognitiveState) => {
+      onStage?.(stage);
+      spinner.text = `Stage: ${stage}`;
+    };
+
     // 1. Initialize tool registry with MCP tools
     const dynamicToolDescriptions: Record<string, string> = {};
     try {
@@ -301,18 +312,28 @@ export class ReActEngine {
         this.state.iteration++;
         spinner.text = `Thinking (iteration ${this.state.iteration})...`;
 
-        // Get response from LLM
+        // PERCEIVE: Gather context and sense the environment
+        emitStage('PERCEIVE');
+
+        // Get response from LLM with optional streaming
         const result = await this.providerChain.generateWithFailover(
           [
             { role: 'system', content: systemContext, timestamp: Date.now() },
             ...this.state.messages.slice(-this.config.contextLength),
-          ]
+          ],
+          undefined,
+          undefined,
+          onChunk
         );
+
+        // REASON: Interpret the response and decide next steps
+        emitStage('REASON');
 
         const response = result.response.content;
         const toolCall = parseToolCall(response);
 
         if (toolCall) {
+          emitStage('PLAN');
           spinner.stop();
           
           if (this.config.planMode && !READ_ONLY_TOOLS.includes(toolCall.tool)) {
@@ -322,12 +343,16 @@ export class ReActEngine {
               content: `[TOOL RESULT: ${toolCall.tool}]\nError: Cannot execute mutating tool '${toolCall.tool}' in Plan Mode. You are in read-only mode to explore and plan.`,
               timestamp: Date.now(),
             });
-            this.state.completedActions.push(`${toolCall.tool}: ✗ (Blocked by Plan Mode)`);
+            const actionLabel = `${toolCall.tool}: ✗ (Blocked by Plan Mode)`;
+            this.state.completedActions.push(actionLabel);
+            onAction?.(actionLabel);
             spinner.start();
+            emitStage('REFLECT');
             continue;
           }
 
-          // Execute tool
+          // ACT: execute the selected tool
+          emitStage('ACT');
           const actionResult = await this.executeTool(
             toolCall.tool,
             toolCall.params,
@@ -341,10 +366,12 @@ export class ReActEngine {
               content: 'Action cancelled by user.',
               timestamp: Date.now(),
             });
+            emitStage('REFLECT');
             continue;
           }
 
-          // Add observation to messages
+          // OBSERVE: add observation from tool execution
+          emitStage('OBSERVE');
           const label = actionResult.success ? 'TOOL RESULT' : 'TOOL ERROR';
           const recoveryAdvice = actionResult.success 
             ? '' 
@@ -356,12 +383,19 @@ export class ReActEngine {
             timestamp: Date.now(),
           });
 
-          this.state.completedActions.push(`${toolCall.tool}: ${actionResult.success ? '✓' : '✗'}`);
+          const actionLabel = `${toolCall.tool}: ${actionResult.success ? '✓' : '✗'}`;
+          this.state.completedActions.push(actionLabel);
+          onAction?.(actionLabel);
 
+          // REFLECT: prepare for the next reasoning iteration
+          emitStage('REFLECT');
           spinner.start();
         } else {
           // No tool call - task is complete
           spinner.stop();
+
+          // LEARN: finish up and solidify outcome
+          emitStage('LEARN');
           
           // Remove tool call syntax from final response
           const cleanResponse = response.replace(/\[TOOL:\s*\w+\]\s*\n?{[\s\S]*}/g, '').trim();
@@ -375,6 +409,7 @@ export class ReActEngine {
       }
 
       spinner.stop();
+      emitStage('LEARN');
       return {
         success: false,
         result: 'Max iterations reached. Task may be incomplete.',
@@ -383,6 +418,7 @@ export class ReActEngine {
 
     } catch (error: any) {
       spinner.stop();
+      emitStage('LEARN');
       return {
         success: false,
         result: error.message || 'An error occurred',

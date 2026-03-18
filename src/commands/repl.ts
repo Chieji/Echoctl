@@ -355,7 +355,19 @@ async function processAgentTurn(
     contextLength: getConfig().getContextLength(),
   });
 
-  const result = await engine.run(message);
+  const spinner = ora({ text: chalk.dim('Thinking...'), spinner: 'dots' }).start();
+  let firstChunk = true;
+
+  const result = await engine.run(message, (chunk: string) => {
+    if (firstChunk) {
+      spinner.stop();
+      console.log(''); // Newline
+      firstChunk = false;
+    }
+    process.stdout.write(chunk);
+  });
+
+  if (firstChunk) spinner.stop();
 
   console.log('\n' + chalk.dim('─'.repeat(40)));
   console.log(chalk.bold(result.success ? '✓ Task Complete' : '⚠ Task Incomplete'));

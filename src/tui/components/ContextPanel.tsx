@@ -115,29 +115,61 @@ function BrowserContext() {
 }
 
 function MemoryContext() {
-  const [memories, setMemories] = useState(0);
+  const [stats, setStats] = useState(() => getBrainStore().getStats());
+  const [memories, setMemories] = useState(() => getBrainStore().list(8));
+
+  const refresh = () => {
+    const brain = getBrainStore();
+    setStats(brain.getStats());
+    setMemories(brain.list(8));
+  };
 
   useEffect(() => {
-    const brain = getBrainStore();
-    const stats = brain.getStats();
-    setMemories(stats.totalMemories);
+    refresh();
   }, []);
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" padding={1}>
       <Text color="yellow" bold>Memory Mode</Text>
-      <Box marginY={1}>
+      <Box marginY={1} flexDirection="column">
         <Text color="gray" dimColor>Second Brain knowledge base.</Text>
       </Box>
-      <Box marginY={1}>
-        <Text color="gray" dimColor>Stored Memories:</Text>
-        <Text color="cyan" bold>{memories}</Text>
+
+      <Box marginY={1} flexDirection="column">
+        <Text color="gray" dimColor>Stats:</Text>
+        <Text color="cyan">  Memories: {stats.totalMemories}</Text>
+        <Text color="cyan">  Tags: {stats.totalTags}</Text>
+        {stats.mostAccessed && (
+          <Text color="cyan">  Top: {stats.mostAccessed.key} ({stats.mostAccessed.accessCount} views)</Text>
+        )}
+        {stats.recentlyUpdated && (
+          <Text color="cyan">  Recent: {stats.recentlyUpdated.key}</Text>
+        )}
       </Box>
-      <Box marginY={1}>
+
+      <Box marginY={1} flexDirection="column">
+        <Text color="gray" dimColor>Recent Memories:</Text>
+        {memories.length === 0 && (
+          <Text color="gray" dimColor>  No memories yet. Use `save {'<key>'} {'<value>'}` in chat mode.</Text>
+        )}
+        {memories.map((m) => (
+          <Box key={m.id} flexDirection="column" marginY={0}>
+            <Text color="cyan" bold>  {m.key}</Text>
+            <Text color="gray">    {m.value.length > 80 ? `${m.value.slice(0, 80)}...` : m.value}</Text>
+            <Text color="gray" dimColor>    Tags: {m.tags.join(', ') || 'none'}</Text>
+          </Box>
+        ))}
+        {stats.totalMemories > memories.length && (
+          <Text color="gray" dimColor>  ...and {stats.totalMemories - memories.length} more.</Text>
+        )}
+      </Box>
+
+      <Box marginY={1} flexDirection="column">
         <Text color="gray" dimColor>Commands:</Text>
-        <Text color="gray">  save {'<key>'} {'<value>'}</Text>
-        <Text color="gray">  get {'<key>'}</Text>
-        <Text color="gray">  search {'<query>'}</Text>
+        <Text color="gray">  save {'<key>'} {'<value>'}  (store a memory)</Text>
+        <Text color="gray">  get {'<key>'}  (retrieve memory)</Text>
+        <Text color="gray">  search {'<query>'}  (search memories)</Text>
+        <Text color="gray">  refresh  (refresh this view)</Text>
       </Box>
     </Box>
   );

@@ -13,6 +13,8 @@ import { CommandInput } from './components/CommandInput.js';
 import { ContextPanel } from './components/ContextPanel.js';
 import { FileTree } from './components/FileTree.js';
 import { CommandPalette } from './components/CommandPalette.js';
+import { BDICycle } from './components/BDICycle.js';
+import { ThoughtProcessPanel } from './components/ThoughtProcessPanel.js';
 import { useCognitiveEngine } from '../hooks/useEngine.js';
 
 interface EchomenAppProps {
@@ -120,7 +122,12 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
       <Header mode={mode} />
 
       {/* Status bar with cognitive state and shortcuts */}
-      <StatusBar mode={mode} isProcessing={isProcessing || engineProcessing} messageCount={messages.length} />
+      <StatusBar 
+        mode={mode} 
+        isProcessing={isProcessing || engineProcessing} 
+        messageCount={messages.length}
+        cognitiveState={cognitiveState}
+      />
 
       {/* Main content area */}
       <Box flexDirection="row" flexGrow={1} overflow="hidden">
@@ -157,9 +164,18 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
           </Box>
         </Box>
 
-        {/* Right panel - Context information */}
-        <Box width={35} borderStyle="single" borderColor="gray">
-          <ContextPanel mode={mode} />
+        {/* Right panel - Context information and BDI visualization */}
+        <Box width={35} flexDirection="column" borderStyle="single" borderColor="gray">
+          {/* BDI Cognitive Cycle Visualization */}
+          <Box flexDirection="column" paddingX={1} paddingY={1}>
+            <Text color="cyan" bold>BDI Cognitive Cycle</Text>
+            <BDICycle state={cognitiveState} />
+          </Box>
+          
+          {/* Context Panel */}
+          <Box flexGrow={1}>
+            <ContextPanel mode={mode} />
+          </Box>
         </Box>
       </Box>
 
