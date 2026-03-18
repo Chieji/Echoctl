@@ -1,4 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
+import { LongTermMemory } from '../memory/vector-memory.ts';
 
 /**
  * Reflector - Handles the 'Reflection' and 'Learning' phase.
@@ -6,6 +7,7 @@ import { getBrainStore } from '../storage/brain.js';
  */
 export class Reflector {
   private brainStore = getBrainStore();
+  private semanticMemory = new LongTermMemory();
 
   /**
    * Reflect on the task result and store learned knowledge
@@ -14,16 +16,18 @@ export class Reflector {
     if (!success) {
       // Record failure as a lesson
       await this.brainStore.save(`failure_${Date.now()}`, `Task: ${task}\nResult: FAILED - ${result.substring(0, 200)}`, ['experience', 'failure']);
-      return;
+    } else {
+      // Store successful task results
+      const summary = result.substring(0, 500);
+      await this.brainStore.save(`task_${Date.now()}`, `Task: ${task}\nResult: ${summary}`, ['experience', 'success']);
     }
 
-    // Store successful task results
-    const summary = result.substring(0, 500);
-    await this.brainStore.save(`task_${Date.now()}`, `Task: ${task}\nResult: ${summary}`, ['experience', 'success']);
-    
-    // Extract potential preferences or habits
-    if (task.toLowerCase().includes('prefer') || task.toLowerCase().includes('always')) {
-        await this.brainStore.save('user_learned_preference', `Learned from success: ${task}`, ['learning', 'preference']);
+    // Commit to Semantic layer (Long-term)
+    try {
+      const content = `Task: ${task}\nResult: ${result.substring(0, 500)}`;
+      await this.semanticMemory.commit(content, success ? 1 : 2, 'reflection');
+    } catch {
+      // Ignore
     }
   }
 }

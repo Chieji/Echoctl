@@ -168,6 +168,16 @@ export interface AppConfig {
   contextLength: number;
 }
 
+/**
+ * Structured NLU Intent
+ */
+export interface Intent {
+  goal: string;
+  action: string;
+  entities: Record<string, string>;
+  confidence: number;
+}
+
 // Note: SessionDatabase is now the primary database interface (see above)
 // Database interface kept for backward compatibility with memory.ts
 export type Database = SessionDatabase;

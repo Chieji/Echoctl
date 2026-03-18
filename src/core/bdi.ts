@@ -17,11 +17,12 @@ export class BDIEngine {
   
   // Cognitive Modules
   private perceptor = new Perceptor();
-  private reasoner = new Reasoner();
+  private reasoner: Reasoner;
   private reflector = new Reflector();
 
   constructor(providerChain: ProviderChain, config?: Partial<EngineConfig>) {
     this.engine = new ReActEngine(providerChain, config);
+    this.reasoner = new Reasoner(providerChain);
     this.beliefs = {
       memories: [],
       capabilities: [

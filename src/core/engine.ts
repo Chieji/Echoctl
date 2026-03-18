@@ -345,9 +345,14 @@ export class ReActEngine {
           }
 
           // Add observation to messages
+          const label = actionResult.success ? 'TOOL RESULT' : 'TOOL ERROR';
+          const recoveryAdvice = actionResult.success 
+            ? '' 
+            : '\nAnalyze why this failed and suggest a fix or a different approach.';
+
           this.state.messages.push({
             role: 'user',
-            content: `[TOOL RESULT: ${toolCall.tool}]\n${actionResult.output}`,
+            content: `[${label}: ${toolCall.tool}]\n${actionResult.output}${recoveryAdvice}`,
             timestamp: Date.now(),
           });
 
