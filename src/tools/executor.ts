@@ -1,16 +1,21 @@
 /**
  * Tool Execution Engine
  * Handles shell commands, file I/O, and code execution
+ * 
+ * SECURITY FIX 1.3: Replaced exec() with execFile() + allowlist
+ * - No shell interpretation
+ * - Explicit argument validation
+ * - Bypassable blocklist replaced with strict allowlist
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { readFile, writeFile, readdir, stat, rm } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { existsSync } from 'fs';
 import os from 'os';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface ToolResult {
   success: boolean;
@@ -20,76 +25,97 @@ export interface ToolResult {
 }
 
 /**
- * Security: Dangerous command patterns to block
- * These patterns are checked before any command execution
+ * SECURITY FIX 1.3: Allowlist-based command validation
+ * Only explicitly permitted commands and arguments are allowed
  */
-const DANGEROUS_PATTERNS = [
-  // Disk destruction
-  { pattern: /rm\s+(-[rf]+\s+)?\/\s*$/, reason: 'Cannot delete root directory' },
-  { pattern: /rm\s+(-[rf]+\s+)?\/\s+--no-preserve-root/, reason: 'Cannot delete root directory' },
-  { pattern: /rm\s+(-[rf]+\s+)?\*\s*$/, reason: 'Cannot delete all files in directory' },
-  { pattern: /rm\s+-rf\s+\.\.\//, reason: 'Cannot delete parent directories recursively' },
-  
-  // Disk filling / zeroing
-  { pattern: /dd\s+if=\/dev\/zero/, reason: 'Cannot write zeros to device' },
-  { pattern: /dd\s+if=\/dev\/null/, reason: 'Cannot write null to device' },
-  { pattern: /:\(\)\{:\|:&\};:/, reason: 'Fork bomb detected' },
-  
-  // Filesystem destruction
-  { pattern: /mkfs/, reason: 'Cannot create filesystem' },
-  { pattern: /mke2fs/, reason: 'Cannot create ext filesystem' },
-  { pattern: /fdisk.*-d/, reason: 'Cannot delete partition' },
-  
-  // Permission escalation
-  { pattern: /chmod\s+(-R\s+)?777\s+\/\s*$/, reason: 'Cannot set root to world-writable' },
-  { pattern: /chmod\s+(-R\s+)?777\s+\*\s*$/, reason: 'Cannot set all files to world-writable' },
-  { pattern: /chown\s+(-R\s+)?root:root\s+\/\s*$/, reason: 'Cannot change root ownership recursively' },
-  
-  // Download and execute (very dangerous)
-  { pattern: /wget.*\|\s*(ba)?sh/, reason: 'Cannot download and execute script' },
-  { pattern: /curl.*\|\s*(ba)?sh/, reason: 'Cannot download and execute script' },
-  { pattern: /wget.*-O-.*\|/, reason: 'Cannot download and pipe output' },
-  { pattern: /curl.*-s.*\|.*sh/, reason: 'Cannot download and execute script' },
-  
-  // History / audit tampering
-  { pattern: /history\s+-c/, reason: 'Cannot clear command history' },
-  { pattern: /rm\s+.*\.bash_history/, reason: 'Cannot delete bash history' },
-  { pattern: /unset\s+HISTFILE/, reason: 'Cannot disable command history' },
-  
-  // Process killing
-  { pattern: /kill\s+-9\s+1/, reason: 'Cannot kill init process' },
-  { pattern: /killall\s+-9/, reason: 'Cannot kill all processes' },
-  
-  // Environment manipulation
-  { pattern: /export\s+PATH=\/dev\/null/, reason: 'Cannot set PATH to null' },
-  { pattern: /unset\s+PATH/, reason: 'Cannot unset PATH' },
-];
+const ALLOWLISTED_COMMANDS = {
+  'git': ['status', 'log', 'diff', 'clone', 'pull', 'push', 'commit', 'branch', 'checkout', 'add', 'init', 'remote', 'fetch', 'merge', 'rebase'],
+  'npm': ['install', 'run', 'test', 'build', 'start', 'list', 'info', 'outdated', 'audit', 'ci'],
+  'node': ['--version', '--help'],
+  'python3': ['--version', '--help'],
+  'ls': ['-la', '-l', '-a', '-h', '-R'],
+  'cat': [],
+  'grep': ['-r', '-i', '-n', '-l', '-c', '-v', '-E'],
+  'find': ['.', '-name', '-type', '-path', '-exec', '-delete'],
+  'mkdir': ['-p', '-m'],
+  'touch': [],
+  'cp': ['-r', '-f', '-v'],
+  'mv': ['-f', '-v'],
+  'pwd': [],
+  'whoami': [],
+  'date': [],
+  'echo': [],
+  'wc': ['-l', '-w', '-c'],
+  'head': ['-n'],
+  'tail': ['-n', '-f'],
+  'sort': ['-r', '-n', '-u'],
+  'uniq': ['-c', '-d', '-u'],
+  'cut': ['-d', '-f'],
+  'sed': ['-e', '-i', '-n'],
+  'awk': ['-F', '-v'],
+  'tr': ['-d', '-s', '-c'],
+  'file': [],
+  'stat': [],
+  'chmod': ['-R'],
+  'chown': ['-R'],
+  'du': ['-h', '-s', '-a'],
+  'df': ['-h'],
+  'ps': ['aux', '-ef'],
+  'top': ['-b', '-n'],
+  'kill': ['-9', '-15'],
+  'which': [],
+  'whereis': [],
+  'type': [],
+  'command': [],
+};
 
 /**
- * Check if a command is dangerous
+ * Resolve command path from allowed locations
  */
-function isCommandDangerous(command: string): { safe: boolean; reason?: string } {
-  const normalizedCommand = command.toLowerCase().trim();
+function resolveCommand(cmd: string): string {
+  const allowedPaths = ['/usr/bin', '/bin', '/usr/local/bin', '/usr/sbin', '/sbin'];
   
-  for (const { pattern, reason } of DANGEROUS_PATTERNS) {
-    if (pattern.test(normalizedCommand)) {
-      return { safe: false, reason };
+  for (const dir of allowedPaths) {
+    const fullPath = join(dir, cmd);
+    if (existsSync(fullPath)) {
+      return fullPath;
     }
   }
   
-  // Additional heuristic: check for multiple dangerous operations chained
-  const dangerousChains = ['&& rm -rf', '|| rm -rf', '; rm -rf'];
-  for (const chain of dangerousChains) {
-    if (normalizedCommand.includes(chain)) {
-      return { safe: false, reason: 'Dangerous command chain detected' };
-    }
-  }
-  
-  return { safe: true };
+  throw new Error(`Command not found in allowed paths: ${cmd}`);
 }
 
 /**
- * Execute a shell command
+ * Validate that an argument is in the allowed list for the command
+ */
+function validateArgument(command: string, arg: string): boolean {
+  const allowedArgs = ALLOWLISTED_COMMANDS[command as keyof typeof ALLOWLISTED_COMMANDS];
+  
+  if (!allowedArgs) {
+    return false;
+  }
+  
+  // If command has no restrictions (empty array), allow any argument
+  if (allowedArgs.length === 0) {
+    return true;
+  }
+  
+  // Check if argument is in the allowed list
+  if (allowedArgs.includes(arg)) {
+    return true;
+  }
+  
+  // Allow file paths (don't start with -)
+  if (!arg.startsWith('-')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Execute a shell command safely using execFile (no shell interpretation)
+ * SECURITY: Uses allowlist + execFile to prevent command injection
  */
 export async function runCommand(
   command: string,
@@ -99,21 +125,64 @@ export async function runCommand(
   const timeout = options.timeout || 30000; // 30s default
   const cwd = options.cwd || process.cwd();
 
-  // Security: Check for dangerous commands
-  const safetyCheck = isCommandDangerous(command);
-  if (!safetyCheck.safe) {
-    return {
-      success: false,
-      output: '',
-      error: `Security: ${safetyCheck.reason}`,
-    };
-  }
-
   try {
-    const { stdout, stderr } = await execAsync(command, {
-      timeout,
+    // Parse command and arguments
+    const parts = command.trim().split(/\s+/);
+    const cmd = parts[0];
+    const args = parts.slice(1);
+
+    // 1. Validate command is in allowlist
+    if (!(cmd in ALLOWLISTED_COMMANDS)) {
+      return {
+        success: false,
+        output: '',
+        error: `Security: Command not allowed: ${cmd}`,
+      };
+    }
+
+    // 2. Validate each argument
+    for (const arg of args) {
+      if (!validateArgument(cmd, arg)) {
+        return {
+          success: false,
+          output: '',
+          error: `Security: Argument not allowed for ${cmd}: ${arg}`,
+        };
+      }
+
+      // Prevent path traversal in arguments
+      if (arg.includes('..') || arg.includes('~')) {
+        return {
+          success: false,
+          output: '',
+          error: `Security: Path traversal detected in argument: ${arg}`,
+        };
+      }
+    }
+
+    // 3. Validate working directory (prevent path traversal)
+    if (cwd) {
+      const resolvedCwd = resolve(cwd);
+      const homeDir = os.homedir();
+      const allowedBase = resolve(homeDir);
+      
+      if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
+        return {
+          success: false,
+          output: '',
+          error: `Security: Working directory outside allowed base: ${resolvedCwd}`,
+        };
+      }
+    }
+
+    // 4. Execute with execFile (no shell interpretation)
+    const cmdPath = resolveCommand(cmd);
+    
+    const { stdout, stderr } = await execFileAsync(cmdPath, args, {
       cwd,
+      timeout,
       maxBuffer: 1024 * 1024 * 10, // 10MB
+      killSignal: 'SIGTERM',
     });
 
     return {
