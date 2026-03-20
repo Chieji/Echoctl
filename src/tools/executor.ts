@@ -101,7 +101,7 @@ function validateArgument(command: string, arg: string): boolean {
   }
   
   // Check if argument is in the allowed list
-  if (allowedArgs.includes(arg)) {
+  if ((allowedArgs as string[]).includes(arg)) {
     return true;
   }
   

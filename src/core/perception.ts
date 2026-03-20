@@ -1,5 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
-import { LongTermMemory } from '../memory/vector-memory.ts';
+import { LongTermMemory } from '../memory/vector-memory.js';
 import { loadEchoContext } from '../tools/context-loader.js';
 import { getGitStatus } from '../tools/git.js';
 import { Beliefs } from './bdi-types.js';

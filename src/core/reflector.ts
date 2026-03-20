@@ -1,5 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
-import { LongTermMemory } from '../memory/vector-memory.ts';
+import { LongTermMemory } from '../memory/vector-memory.js';
 
 /**
  * Reflector - Handles the 'Reflection' and 'Learning' phase.
