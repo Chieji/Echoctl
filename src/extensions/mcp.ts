@@ -270,6 +270,9 @@ export class MCPManager {
         this.clients.set(name, client);
       }
     }
+    // Invalidate cache on client set change
+    this.cachedTools = null;
+    this.lastCacheUpdate = 0;
   }
 
   /**
@@ -299,9 +302,9 @@ export class MCPManager {
       }
     }));
 
-    // Update cache
+    // Update cache and timestamp after all calls complete
     this.cachedTools = allTools;
-    this.lastCacheUpdate = now;
+    this.lastCacheUpdate = Date.now();
     
     return allTools;
   }
@@ -314,6 +317,9 @@ export class MCPManager {
       client.stop();
     }
     this.clients.clear();
+    // Invalidate cache on client set change
+    this.cachedTools = null;
+    this.lastCacheUpdate = 0;
   }
 }
 
