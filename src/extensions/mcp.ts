@@ -255,6 +255,9 @@ export class MCPServerClient {
  */
 export class MCPManager {
   private clients = new Map<string, MCPServerClient>();
+  private cachedTools: Record<string, { tool: MCPTool, client: MCPServerClient }> | null = null;
+  private lastCacheUpdate = 0;
+  private readonly CACHE_TTL = 300000; // 5 minutes
 
   /**
    * Initialize and start enabled MCP servers
@@ -271,22 +274,34 @@ export class MCPManager {
 
   /**
    * Get all available tools from all active servers
+   * Performance: Parallelized tool loading and caching implemented by Bolt ⚡
    */
   async getAllTools(): Promise<Record<string, { tool: MCPTool, client: MCPServerClient }>> {
+    // Return cached tools if still valid
+    const now = Date.now();
+    if (this.cachedTools && (now - this.lastCacheUpdate < this.CACHE_TTL)) {
+      return this.cachedTools;
+    }
+
     const allTools: Record<string, { tool: MCPTool, client: MCPServerClient }> = {};
-    
-    for (const client of this.clients.values()) {
+    const clients = Array.from(this.clients.values());
+
+    // Load tools from all clients in parallel
+    await Promise.all(clients.map(async (client) => {
       try {
         const tools = await client.listTools();
         for (const tool of tools) {
-          // Prefix tool name to avoid conflicts if needed, or just map them
           const toolKey = `mcp_${client.name}_${tool.name}`;
           allTools[toolKey] = { tool, client };
         }
       } catch (error) {
         console.error(chalk.yellow(`Warning: Could not list tools from MCP server ${client.name}`));
       }
-    }
+    }));
+
+    // Update cache
+    this.cachedTools = allTools;
+    this.lastCacheUpdate = now;
     
     return allTools;
   }
