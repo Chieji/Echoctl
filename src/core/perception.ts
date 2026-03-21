@@ -27,23 +27,16 @@ export class Perceptor {
       cwd: process.cwd()
     };
 
-    // Try to get git status
-    try {
-      env.gitStatus = await getGitStatus();
-    } catch (e) {
-      // Not a git repo or git not installed
-    }
+    // Gather Environment Info and Recall memories in parallel
+    // Performance: Parallelized by Bolt ⚡
+    const [gitStatus, echoContext, recalled] = await Promise.all([
+      getGitStatus().catch(() => null),
+      loadEchoContext().catch(() => null),
+      this.semanticMemory.recall(task, 3).catch(() => [] as string[])
+    ]);
 
-    // 3. Load Project Context (ECHO.md)
-    try {
-      const echoContext = await loadEchoContext();
-      if (echoContext) {
-        env.projectContext = echoContext.rawContent;
-      }
-    } catch (e) {
-      // No ECHO.md found
-    }
-
+    if (gitStatus) env.gitStatus = gitStatus;
+    if (echoContext) env.projectContext = echoContext.rawContent;
     beliefs.environment = env;
 
     // 4. Check for User Preferences
@@ -52,14 +45,9 @@ export class Perceptor {
       beliefs.context = `${beliefs.context} User prefers ${langPref.value} response style.`.trim();
     }
 
-    // 5. Recall from Semantic layer (Vector memory)
-    try {
-      const recalled = await this.semanticMemory.recall(task, 3);
-      if (recalled.length > 0) {
-        beliefs.memories = [...beliefs.memories, ...recalled.map(m => `[RECALLED]: ${m}`)];
-      }
-    } catch {
-      // Ignore if semantic layer is unavailable
+    // 5. Add recalled memories if any
+    if (recalled && recalled.length > 0) {
+      beliefs.memories = [...beliefs.memories, ...recalled.map(m => `[RECALLED]: ${m}`)];
     }
 
     return beliefs;
