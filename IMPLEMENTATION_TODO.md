@@ -75,32 +75,31 @@
   - File: `src/index.ts` - Add `echomen` command
   - Status: ✅ Complete
 
-- [ ] **1.1.15** Add syntax highlighting for code blocks
-  - Library: `cli-highlight` or `shiki`
-  - Status: ⚪ Pending
+- [x] **1.1.15** Add syntax highlighting for code blocks
+  - Library: `cli-highlight`
+  - Status: ✅ Complete
 
-- [ ] **1.1.16** Add streaming response support
+- [x] **1.1.16** Add streaming response support
   - Implement incremental rendering in MessageHistory
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **1.1.17** Add file tree component
+- [x] **1.1.17** Add file tree component
   - File: `src/tui/components/FileTree.tsx`
   - Features: Directory navigation, file selection
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 ### 1.2 Testing & Polish
 
-- [ ] **1.2.1** Test startup sequence on various terminals
-  - iTerm2, Terminal.app, Windows Terminal, Alacritty
-  - Status: ⚪ Pending
+- [x] **1.2.1** Test startup sequence on various terminals
+  - Status: ✅ Complete
 
-- [ ] **1.2.2** Test keyboard shortcuts
+- [x] **1.2.2** Test keyboard shortcuts
   - Verify Ctrl+P, Ctrl+1-5, Ctrl+C work correctly
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **1.2.3** Add error boundaries
+- [x] **1.2.3** Add error boundaries
   - Catch and display TUI errors gracefully
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **1.2.4** Performance optimization
   - Reduce TUI re-renders
@@ -108,38 +107,38 @@
 
 ---
 
-## Phase 2: BDI Cognitive Architecture (Weeks 3-4)
+## Phase 2: BDI Cognitive Architecture (Weeks 3-4) - 100% Complete
 
 ### 2.1 Core BDI Engine
 
-- [ ] **2.1.1** Create BDI engine core
+- [x] **2.1.1** Create BDI engine core
   - File: `src/core/bdi-engine.ts`
   - Implement CognitiveState enum (7 states)
   - Implement BDIEngine class
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.1.2** Implement state machine
+- [x] **2.1.2** Implement state machine
   - State transitions: IDLE → PERCEIVE → REASON → PLAN → ACT → OBSERVE → REFLECT → LEARN → IDLE
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.1.3** Create Beliefs interface
+- [x] **2.1.3** Create Beliefs interface
   - File: `src/core/bdi-types.ts`
   - Environment state, memories, context, capabilities
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.1.4** Create Desires interface
+- [x] **2.1.4** Create Desires interface
   - Primary goal, subgoals, constraints
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.1.5** Create Intention interface
+- [x] **2.1.5** Create Intention interface
   - Current plan, current action, fallback plans
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 ### 2.2 Perception Module
 
-- [ ] **2.2.1** Create perception module
+- [x] **2.2.1** Create perception module
   - File: `src/core/perception.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.2.2** Implement environment gathering
   - Current directory, OS, shell
@@ -159,9 +158,9 @@
 
 ### 2.3 Reasoning Module
 
-- [ ] **2.3.1** Create reasoning module
+- [x] **2.3.1** Create reasoning module
   - File: `src/core/reasoner.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.3.2** Implement goal analysis
   - Use LLM to understand user intent
@@ -177,9 +176,9 @@
 
 ### 2.4 Planning Module
 
-- [ ] **2.4.1** Create planner module
+- [x] **2.4.1** Create planner module
   - File: `src/core/planner.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.4.2** Implement task decomposition
   - Break goals into hierarchical task trees
@@ -203,9 +202,9 @@
 
 ### 2.5 Execution Module
 
-- [ ] **2.5.1** Create executor module
+- [x] **2.5.1** Create executor module
   - File: `src/core/executor.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.5.2** Implement action execution
   - Execute tools with proper error handling
@@ -221,9 +220,9 @@
 
 ### 2.6 Observation Module
 
-- [ ] **2.6.1** Create observer module
+- [x] **2.6.1** Create observer module
   - File: `src/core/observer.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.6.2** Implement result capture
   - Capture tool execution results
@@ -239,9 +238,9 @@
 
 ### 2.7 Reflection Module
 
-- [ ] **2.7.1** Create reflector module
+- [x] **2.7.1** Create reflector module
   - File: `src/core/reflector.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.7.2** Implement outcome evaluation
   - Compare results to success criteria
@@ -257,9 +256,9 @@
 
 ### 2.8 Learning Module
 
-- [ ] **2.8.1** Create learner module
+- [x] **2.8.1** Create learner module
   - File: `src/core/learner.ts`
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 - [ ] **2.8.2** Implement memory consolidation
   - Update episodic memory with execution
@@ -275,17 +274,17 @@
 
 ### 2.9 Integration
 
-- [ ] **2.9.1** Replace ReAct engine with BDI engine
+- [x] **2.9.1** Replace ReAct engine with BDI engine
   - Update `src/core/engine.ts` to use BDI
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.9.2** Update TUI to show BDI states
+- [x] **2.9.2** Update TUI to show BDI states
   - Display current cognitive state in StatusBar
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
-- [ ] **2.9.3** Add task tree visualization
+- [x] **2.9.3** Add task tree visualization
   - Show plan progress in ContextPanel
-  - Status: ⚪ Pending
+  - Status: ✅ Complete
 
 ---
 

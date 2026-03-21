@@ -2,6 +2,17 @@
  * BDI Type Definitions
  */
 
+export enum CognitiveState {
+  IDLE = 'IDLE',
+  PERCEIVE = 'PERCEIVE',
+  REASON = 'REASON',
+  PLAN = 'PLAN',
+  ACT = 'ACT',
+  OBSERVE = 'OBSERVE',
+  REFLECT = 'REFLECT',
+  LEARN = 'LEARN'
+}
+
 export interface Beliefs {
   memories: string[];
   capabilities: string[];
@@ -13,8 +24,23 @@ export interface Beliefs {
   };
 }
 
+export interface Desire {
+  goal: string;
+  constraints: string[];
+}
+
+export interface TaskNode {
+  id: string;
+  task: string;
+  status: 'pending' | 'active' | 'completed' | 'failed';
+  dependencies: string[];
+  result?: any;
+  subtasks: TaskNode[];
+}
+
 export interface Intention {
   goal: string;
+  plan: TaskNode[];
   steps: string[];
-  currentStepIndex: number;
+  currentTaskIndex: number;
 }

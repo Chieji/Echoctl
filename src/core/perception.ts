@@ -28,7 +28,6 @@ export class Perceptor {
     };
 
     // Gather Environment Info and Recall memories in parallel
-    // Performance: Parallelized by Bolt ⚡
     const [gitStatus, echoContext, recalled] = await Promise.all([
       getGitStatus().catch(() => null),
       loadEchoContext().catch(() => null),

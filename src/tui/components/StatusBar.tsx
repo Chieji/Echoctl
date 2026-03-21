@@ -14,9 +14,7 @@ interface StatusBarProps {
   messageCount: number;
 }
 
-export function StatusBar({ mode, isProcessing, messageCount }: StatusBarProps) {
-  const state = useCognitiveState();
-
+export function StatusBar({ mode, isProcessing, messageCount, state }: StatusBarProps & { state?: string }) {
   return (
     <Box
       flexDirection="row"
