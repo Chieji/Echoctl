@@ -11,6 +11,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
 import { getMCPManager } from '../extensions/mcp.js';
+import { BDIEngine } from './bdi-engine.js';
 
 // Initial static tool registry
 const staticToolRegistry = {
@@ -635,4 +636,14 @@ export function createReActEngine(
   config?: Partial<EngineConfig>
 ): ReActEngine {
   return new ReActEngine(providerChain, config);
+}
+
+/**
+ * Create BDI engine instance
+ */
+export function createBDIEngine(
+  providerChain: ProviderChain,
+  config?: Partial<EngineConfig>
+): BDIEngine {
+  return new BDIEngine(providerChain, config);
 }

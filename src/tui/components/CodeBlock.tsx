@@ -14,19 +14,24 @@ interface CodeBlockProps {
 }
 
 export function CodeBlock({ code, language = 'text', showLineNumbers = false }: CodeBlockProps) {
-  // For now, display code with basic formatting
-  // cli-highlight works better in full terminal, so we'll adapt for Ink
+  // Use cli-highlight for syntax highlighting
+  const highlighted = highlight(code, {
+    language: detectLanguage(language),
+    ignoreIllegals: true,
+  });
   
-  const lines = code.split('\n');
+  const lines = highlighted.split('\n');
   
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor="gray">
       {lines.map((line, index) => (
         <Box key={index}>
           {showLineNumbers && (
-            <Text color="gray" dimColor>
-              {String(index + 1).padStart(3, ' ')}{' '}
-            </Text>
+            <Box width={4}>
+              <Text color="gray" dimColor>
+                {String(index + 1).padStart(3, ' ')}{' '}
+              </Text>
+            </Box>
           )}
           <Text>{line}</Text>
         </Box>

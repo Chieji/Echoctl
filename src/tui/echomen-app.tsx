@@ -13,6 +13,8 @@ import { CommandInput } from './components/CommandInput.js';
 import { ContextPanel } from './components/ContextPanel.js';
 import { FileTree } from './components/FileTree.js';
 import { CommandPalette } from './components/CommandPalette.js';
+import { MemoryPanel } from './components/MemoryPanel.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { useCognitiveEngine } from '../hooks/useEngine.js';
 
 interface EchomenAppProps {
@@ -28,7 +30,7 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<MessageType | null>(null);
 
-  const { process, state: cognitiveState, isProcessing: engineProcessing } = useCognitiveEngine();
+  const { process, state: cognitiveState, isProcessing: engineProcessing, plan } = useCognitiveEngine();
 
   // Handle global keyboard shortcuts
   useInput((input, key) => {
@@ -115,12 +117,18 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
   }, []);
 
   return (
+    <ErrorBoundary>
     <Box flexDirection="column" height="100%">
       {/* Header with logo and mode */}
       <Header mode={mode} />
 
       {/* Status bar with cognitive state and shortcuts */}
-      <StatusBar mode={mode} isProcessing={isProcessing || engineProcessing} messageCount={messages.length} />
+      <StatusBar
+        mode={mode}
+        isProcessing={isProcessing || engineProcessing}
+        messageCount={messages.length}
+        state={cognitiveState}
+      />
 
       {/* Main content area */}
       <Box flexDirection="row" flexGrow={1} overflow="hidden">
@@ -139,12 +147,16 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
         <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor="cyan" marginRight={1}>
           {/* Message history */}
           <Box flexGrow={1} overflow="hidden">
-            <MessageHistory
-              messages={messages}
-              isProcessing={isProcessing || engineProcessing}
-              mode={mode}
-              streamingMessage={streamingMessage}
-            />
+            {mode === 'memory' ? (
+              <MemoryPanel />
+            ) : (
+              <MessageHistory
+                messages={messages}
+                isProcessing={isProcessing || engineProcessing}
+                mode={mode}
+                streamingMessage={streamingMessage}
+              />
+            )}
           </Box>
 
           {/* Command input */}
@@ -159,7 +171,7 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
 
         {/* Right panel - Context information */}
         <Box width={35} borderStyle="single" borderColor="gray">
-          <ContextPanel mode={mode} />
+          <ContextPanel mode={mode} plan={plan} />
         </Box>
       </Box>
 
@@ -190,5 +202,6 @@ export function EchomenApp({ initialMode = 'chat' }: EchomenAppProps) {
         )}
       </Box>
     </Box>
+    </ErrorBoundary>
   );
 }

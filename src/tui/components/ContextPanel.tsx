@@ -9,35 +9,74 @@ import { ViewMode } from '../types.js';
 import { getBrainStore } from '../../storage/brain.js';
 import { getSessionStore } from '../../storage/sessions.js';
 import { FileTree } from './FileTree.js';
+import { TaskNode } from '../../core/bdi-types.js';
 
 interface ContextPanelProps {
   mode: ViewMode;
+  plan?: TaskNode[];
 }
 
-export function ContextPanel({ mode }: ContextPanelProps) {
+export function ContextPanel({ mode, plan }: ContextPanelProps) {
   switch (mode) {
     case 'chat':
-      return <ChatContext />;
+      return <ChatContext plan={plan} />;
     case 'agent':
-      return <AgentContext />;
+      return <AgentContext plan={plan} />;
     case 'code':
-      return <CodeContext />;
+      return <CodeContext plan={plan} />;
     case 'browser':
-      return <BrowserContext />;
+      return <BrowserContext plan={plan} />;
     case 'memory':
-      return <MemoryContext />;
+      return <MemoryContext plan={plan} />;
     default:
-      return <ChatContext />;
+      return <ChatContext plan={plan} />;
   }
 }
 
-function ChatContext() {
+function TaskTree({ plan }: { plan?: TaskNode[] }) {
+  if (!plan || plan.length === 0) return null;
+
+  return (
+    <Box flexDirection="column" marginTop={1} borderTop borderColor="gray" paddingTop={1}>
+      <Text color="yellow" bold>Plan Execution:</Text>
+      {plan.map((node) => (
+        <Box key={node.id} flexDirection="column" marginLeft={1}>
+          <Box>
+            <Text color={
+              node.status === 'completed' ? 'green' :
+              node.status === 'active' ? 'yellow' :
+              node.status === 'failed' ? 'red' : 'gray'
+            }>
+              {node.status === 'completed' ? '✓' :
+               node.status === 'active' ? '▶' :
+               node.status === 'failed' ? '✗' : '○'} {node.task}
+            </Text>
+          </Box>
+          {node.subtasks.map((sub) => (
+            <Box key={sub.id} marginLeft={2}>
+              <Text color={
+                sub.status === 'completed' ? 'green' :
+                sub.status === 'active' ? 'yellow' :
+                sub.status === 'failed' ? 'red' : 'gray'
+              }>
+                - {sub.task}
+              </Text>
+            </Box>
+          ))}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function ChatContext({ plan }: { plan?: TaskNode[] }) {
   return (
     <Box flexDirection="column">
       <Text color="cyan" bold>Chat Mode</Text>
       <Box marginY={1}>
         <Text color="gray" dimColor>Ask questions, get answers.</Text>
       </Box>
+      <TaskTree plan={plan} />
       <Box marginY={1}>
         <Text color="gray" dimColor>Shortcuts:</Text>
         <Text color="gray">  Ctrl+P: Command Palette</Text>
@@ -48,13 +87,14 @@ function ChatContext() {
   );
 }
 
-function AgentContext() {
+function AgentContext({ plan }: { plan?: TaskNode[] }) {
   return (
     <Box flexDirection="column">
       <Text color="green" bold>Agent Mode</Text>
       <Box marginY={1}>
         <Text color="gray" dimColor>ECHO can execute tasks autonomously.</Text>
       </Box>
+      <TaskTree plan={plan} />
       <Box marginY={1}>
         <Text color="gray" dimColor>Available Tools:</Text>
         <Text color="gray">  • Shell commands</Text>
@@ -67,7 +107,7 @@ function AgentContext() {
   );
 }
 
-function CodeContext() {
+function CodeContext({ plan }: { plan?: TaskNode[] }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   return (
@@ -92,17 +132,19 @@ function CodeContext() {
           <Text color="cyan">{selectedFile}</Text>
         </Box>
       )}
+      <TaskTree plan={plan} />
     </Box>
   );
 }
 
-function BrowserContext() {
+function BrowserContext({ plan }: { plan?: TaskNode[] }) {
   return (
     <Box flexDirection="column">
       <Text color="cyan" bold>Browser Mode</Text>
       <Box marginY={1}>
         <Text color="gray" dimColor>WebHawk 2.0 browser automation.</Text>
       </Box>
+      <TaskTree plan={plan} />
       <Box marginY={1}>
         <Text color="gray" dimColor>Capabilities:</Text>
         <Text color="gray">  • Visual navigation</Text>
@@ -114,7 +156,7 @@ function BrowserContext() {
   );
 }
 
-function MemoryContext() {
+function MemoryContext({ plan }: { plan?: TaskNode[] }) {
   const [memories, setMemories] = useState(0);
 
   useEffect(() => {
@@ -129,6 +171,7 @@ function MemoryContext() {
       <Box marginY={1}>
         <Text color="gray" dimColor>Second Brain knowledge base.</Text>
       </Box>
+      <TaskTree plan={plan} />
       <Box marginY={1}>
         <Text color="gray" dimColor>Stored Memories:</Text>
         <Text color="cyan" bold>{memories}</Text>

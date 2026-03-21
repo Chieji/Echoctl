@@ -5,25 +5,20 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { ViewMode } from '../tui/types.js';
-import { ReActEngine, createReActEngine } from '../core/engine.js';
-import { createDefaultChain, ProviderChain } from '../providers/chain.js';
+import { createBDIEngine } from '../core/engine.js';
+import { BDIEngine } from '../core/bdi-engine.js';
+import { CognitiveState, TaskNode } from '../core/bdi-types.js';
+import { createDefaultChain } from '../providers/chain.js';
 import { getConfig } from '../utils/config.js';
 
-export type CognitiveState =
-  | 'IDLE'
-  | 'PERCEIVE'
-  | 'REASON'
-  | 'PLAN'
-  | 'ACT'
-  | 'OBSERVE'
-  | 'REFLECT'
-  | 'LEARN';
+export { CognitiveState };
 
 export interface EngineState {
   state: CognitiveState;
   currentTask?: string;
   progress: number;
   isProcessing: boolean;
+  plan?: TaskNode[];
 }
 
 const MODE_TO_ENGINE: Record<ViewMode, 'chat' | 'agent'> = {
@@ -36,12 +31,12 @@ const MODE_TO_ENGINE: Record<ViewMode, 'chat' | 'agent'> = {
 
 export function useCognitiveEngine() {
   const [engineState, setEngineState] = useState<EngineState>({
-    state: 'IDLE',
+    state: CognitiveState.IDLE,
     progress: 0,
     isProcessing: false,
   });
 
-  const engineRef = useRef<ReActEngine | null>(null);
+  const engineRef = useRef<BDIEngine | null>(null);
 
   // Initialize engine on first use
   const getEngine = useCallback(() => {
@@ -49,7 +44,7 @@ export function useCognitiveEngine() {
       const config = getConfig();
       const providerConfigs = config.getAllProviderConfigs();
       const chain = createDefaultChain(providerConfigs);
-      engineRef.current = createReActEngine(chain, {
+      engineRef.current = createBDIEngine(chain, {
         yoloMode: false,
         maxIterations: 10,
         contextLength: 10,
@@ -64,46 +59,24 @@ export function useCognitiveEngine() {
         ...prev,
         isProcessing: true,
         currentTask: input,
-        state: 'PERCEIVE',
+        state: CognitiveState.PERCEIVE,
         progress: 0.1,
       }));
 
       try {
         const engine = getEngine();
-        const engineMode = MODE_TO_ENGINE[mode];
-
-        // Simulate cognitive states with delays
-        // PERCEIVE
-        setEngineState(prev => ({ ...prev, state: 'PERCEIVE', progress: 0.2 }));
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // REASON
-        setEngineState(prev => ({ ...prev, state: 'REASON', progress: 0.3 }));
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // PLAN
-        setEngineState(prev => ({ ...prev, state: 'PLAN', progress: 0.4 }));
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // ACT - Run the actual engine
-        setEngineState(prev => ({ ...prev, state: 'ACT', progress: 0.5 }));
-        const result = await engine.run(input);
-
-        // OBSERVE
-        setEngineState(prev => ({ ...prev, state: 'OBSERVE', progress: 0.8 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // REFLECT
-        setEngineState(prev => ({ ...prev, state: 'REFLECT', progress: 0.9 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // LEARN
-        setEngineState(prev => ({ ...prev, state: 'LEARN', progress: 1.0 }));
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const result = await engine.execute(input, (state: CognitiveState, progress: number) => {
+          setEngineState(prev => ({
+            ...prev,
+            state,
+            progress,
+            plan: engine.getLatestIntention()?.plan,
+          }));
+        });
 
         // Return to IDLE
         setEngineState({
-          state: 'IDLE',
+          state: CognitiveState.IDLE,
           progress: 0,
           isProcessing: false,
           currentTask: undefined,
@@ -112,7 +85,7 @@ export function useCognitiveEngine() {
         return result.result || 'Task completed.';
       } catch (error: any) {
         setEngineState({
-          state: 'IDLE',
+          state: CognitiveState.IDLE,
           progress: 0,
           isProcessing: false,
           currentTask: undefined,
@@ -129,10 +102,11 @@ export function useCognitiveEngine() {
     progress: engineState.progress,
     isProcessing: engineState.isProcessing,
     currentTask: engineState.currentTask,
+    plan: engineState.plan,
   };
 }
 
 export function useCognitiveState(): CognitiveState {
-  const [state] = useState<CognitiveState>('IDLE');
+  const [state] = useState<CognitiveState>(CognitiveState.IDLE);
   return state;
 }

@@ -40,8 +40,9 @@ export class Reasoner {
 
     return {
       goal: intent.goal,
+      plan: [],
       steps,
-      currentStepIndex: 0
+      currentTaskIndex: 0
     };
   }
 }
