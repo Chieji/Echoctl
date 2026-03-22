@@ -2,17 +2,15 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 import { existsSync } from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { runCommand } from '../tools/runCommand';
+import { isValidPackageName } from '../utils/packageNameValidator';
 
 export interface MCPServerConfig {
   command: string;
   args?: string[];
   env?: Record<string, string>;
-  enabled?: boolean; // Echo-specific extension
-  description?: string; // Echo-specific extension
+  enabled?: boolean;
+  description?: string;
 }
 
 export interface MCPRegistry {
@@ -21,9 +19,6 @@ export interface MCPRegistry {
 
 const MCP_CONFIG_PATH = join(homedir(), '.config', 'echo-cli', 'mcp.json');
 
-/**
- * Load MCP configuration
- */
 export async function loadMCPConfig(): Promise<MCPRegistry> {
   try {
     if (existsSync(MCP_CONFIG_PATH)) {
@@ -40,12 +35,9 @@ export async function loadMCPConfig(): Promise<MCPRegistry> {
   return { mcpServers: {} };
 }
 
-/**
- * Save MCP configuration
- */
 export async function saveMCPConfig(config: MCPRegistry): Promise<void> {
   const configDir = join(homedir(), '.config', 'echo-cli');
-  
+
   if (!existsSync(configDir)) {
     await mkdir(configDir, { recursive: true });
   }
@@ -53,19 +45,15 @@ export async function saveMCPConfig(config: MCPRegistry): Promise<void> {
   await writeFile(MCP_CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
-/**
- * Add an MCP server
- */
 export async function addMCPServer(
   name: string,
   url: string,
   description?: string
 ): Promise<void> {
   const config = await loadMCPConfig();
-  
-  // For 'add', we assume it's a command/URL
+
   config.mcpServers[name] = {
-    command: url, // In simple 'add', URL is the command
+    command: url,
     args: [],
     enabled: true,
     description,
@@ -74,18 +62,12 @@ export async function addMCPServer(
   await saveMCPConfig(config);
 }
 
-/**
- * Remove an MCP server
- */
 export async function removeMCPServer(name: string): Promise<void> {
   const config = await loadMCPConfig();
   delete config.mcpServers[name];
   await saveMCPConfig(config);
 }
 
-/**
- * Enable/disable an MCP server
- */
 export async function setMCPServerEnabled(
   name: string,
   enabled: boolean
@@ -99,46 +81,42 @@ export async function setMCPServerEnabled(
   }
 }
 
-/**
- * List available MCP servers
- */
 export async function listMCPServers(): Promise<any[]> {
   const config = await loadMCPConfig();
   return Object.entries(config.mcpServers).map(([name, cfg]) => ({
     name,
     ...cfg,
-    enabled: cfg.enabled !== false, // default to true
+    enabled: cfg.enabled !== false,
   }));
 }
 
-/**
- * Install an MCP skill (npm package)
- */
 export async function installMCPSkill(packageName: string): Promise<void> {
   const cwd = join(homedir(), '.config', 'echo-cli', 'skills');
-  
+
   if (!existsSync(cwd)) {
     await mkdir(cwd, { recursive: true });
   }
 
-  try {
-    await execAsync(`npm install ${packageName}`, { cwd });
-  } catch (error: any) {
-    throw new Error(`Failed to install skill: ${error.message}`);
+  if (!isValidPackageName(packageName)) {
+    throw new Error(`Invalid package name: ${packageName}`);
+  }
+
+  const res = await runCommand('npm', ['install', packageName], { cwd });
+  if (!res.success) {
+    throw new Error(`npm install failed: ${res.stderr || res.error}`);
   }
 }
 
-/**
- * List installed MCP skills
- */
 export async function listMCPSkills(): Promise<string[]> {
   const cwd = join(homedir(), '.config', 'echo-cli', 'skills');
-  
+
   if (!existsSync(cwd)) return [];
 
   try {
-    const { stdout } = await execAsync('npm list --depth=0', { cwd });
-    const lines = stdout.split('\n').slice(1);
+    const res = await runCommand('npm', ['list', '--depth=0'], { cwd });
+    if (!res.success) return [];
+    
+    const lines = res.stdout.split('\n').slice(1);
     return lines
       .filter(line => line.trim() && !line.includes('empty'))
       .map(line => {
@@ -151,9 +129,23 @@ export async function listMCPSkills(): Promise<string[]> {
   }
 }
 
-/**
- * MCP command handlers boilerplate
- */
+export async function removeMCPSkill(packageName: string): Promise<void> {
+  const cwd = join(homedir(), '.config', 'echo-cli', 'skills');
+
+  if (!existsSync(cwd)) {
+    return;
+  }
+
+  if (!isValidPackageName(packageName)) {
+    throw new Error(`Invalid package name: ${packageName}`);
+  }
+
+  const res = await runCommand('npm', ['uninstall', packageName], { cwd });
+  if (!res.success) {
+    throw new Error(`npm uninstall failed: ${res.stderr || res.error}`);
+  }
+}
+
 export const mcpCommands = {
   list: listMCPServers,
   add: addMCPServer,
