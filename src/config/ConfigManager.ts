@@ -54,7 +54,7 @@ class ConfigManager {
     environment: 'development',
     debug: false,
     apiUrl: process.env.ECHO_API_URL || 'http://localhost:3001',
-    apiKey: process.env.ECHO_API_KEY || 'echomen-secret-token-2026',
+    apiKey: process.env.ECHO_API_KEY || '',
     apiTimeout: 30000,
     theme: 'auto',
     outputFormat: 'text',

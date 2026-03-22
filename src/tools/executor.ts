@@ -56,13 +56,10 @@ const ALLOWLISTED_COMMANDS = {
   'tr': ['-d', '-s', '-c'],
   'file': [],
   'stat': [],
-  'chmod': ['-R'],
-  'chown': ['-R'],
   'du': ['-h', '-s', '-a'],
   'df': ['-h'],
   'ps': ['aux', '-ef'],
   'top': ['-b', '-n'],
-  'kill': ['-9', '-15'],
   'which': [],
   'whereis': [],
   'type': [],
@@ -89,6 +86,12 @@ function resolveCommand(cmd: string): string {
  * Validate that an argument is in the allowed list for the command
  */
 function validateArgument(command: string, arg: string): boolean {
+  // Block common dangerous patterns
+  const dangerousPatterns = [/^\/$/, /^\/\*$/, /^\/home\/?$/, /^\/etc\/?$/, /^\/root\/?$/, /^\/boot\/?$/];
+  if (dangerousPatterns.some(pattern => pattern.test(arg))) {
+    return false;
+  }
+
   const allowedArgs = ALLOWLISTED_COMMANDS[command as keyof typeof ALLOWLISTED_COMMANDS];
   
   if (!allowedArgs) {
@@ -142,6 +145,18 @@ export async function runCommand(
 
     // 2. Validate each argument
     for (const arg of args) {
+      // Check for command injection characters in arguments
+      const injectionChars = [';', '&', '|', '>', '<', '$', '(', ')', '`', '*', '?', '[', ']', '{', '}', '\\'];
+      for (const char of injectionChars) {
+        if (arg.includes(char)) {
+          return {
+            success: false,
+            output: '',
+            error: `Security: Potential command injection detected in argument: ${arg}`,
+          };
+        }
+      }
+
       if (!validateArgument(cmd, arg)) {
         return {
           success: false,
@@ -165,8 +180,9 @@ export async function runCommand(
       const resolvedCwd = resolve(cwd);
       const homeDir = os.homedir();
       const allowedBase = resolve(homeDir);
+      const appRoot = resolve('/app');
       
-      if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
+      if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp') && !resolvedCwd.startsWith(appRoot)) {
         return {
           success: false,
           output: '',

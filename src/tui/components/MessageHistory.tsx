@@ -60,6 +60,7 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
 interface MessageItemProps {
   message: MessageType;
   isStreaming?: boolean;
+  key?: number;
 }
 
 function MessageItem({ message, isStreaming = false }: MessageItemProps) {

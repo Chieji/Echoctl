@@ -276,6 +276,7 @@ export function FileTree({ rootPath = '.', onSelect, maxDepth = 5, height = 15 }
 interface FileTreeNodeProps {
   node: FileNode;
   isSelected: boolean;
+  key?: string;
 }
 
 function FileTreeNode({ node, isSelected }: FileTreeNodeProps) {
