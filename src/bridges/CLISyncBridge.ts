@@ -4,11 +4,12 @@
  */
 
 import { EventEmitter } from 'events';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
+import { runCommand } from '../tools/runCommand';
 
 export interface CLITool {
   name: string;
-  cli: string; // 'gemini', 'qwen', 'claude', etc.
+  cli: string;
   command: string;
   description: string;
   args: Record<string, any>;
@@ -32,9 +33,6 @@ class CLISyncBridge extends EventEmitter {
     this.initializeSupportedCLIs();
   }
 
-  /**
-   * Initialize supported CLI configurations
-   */
   private initializeSupportedCLIs() {
     const clis = [
       {
@@ -71,28 +69,15 @@ class CLISyncBridge extends EventEmitter {
     console.log('✓ CLI Sync Bridge initialized');
   }
 
-  /**
-   * Check if CLI is installed
-   */
   private checkCLIInstalled(executable: string): boolean {
-    try {
-      execSync(`which ${executable}`, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
+    const r = spawnSync('which', [executable], { stdio: 'ignore' });
+    return r.status === 0;
   }
 
-  /**
-   * Get installed CLIs
-   */
   getInstalledCLIs(): CLIConfig[] {
     return Array.from(this.supportedCLIs.values()).filter((cli) => cli.installed);
   }
 
-  /**
-   * Sync tools from Gemini CLI
-   */
   async syncGeminiTools(): Promise<CLITool[]> {
     const config = this.supportedCLIs.get('gemini');
 
@@ -102,8 +87,13 @@ class CLISyncBridge extends EventEmitter {
     }
 
     try {
-      const output = execSync('gemini tools list --json', { encoding: 'utf-8' });
-      const tools = JSON.parse(output);
+      const res = await runCommand('gemini', ['tools', 'list', '--json']);
+      if (!res.success) {
+        console.warn('Failed to query gemini tools:', res.stderr);
+        return [];
+      }
+      let tools = [];
+      try { tools = JSON.parse(res.stdout || '[]'); } catch (e) { tools = []; }
 
       const syncedTools: CLITool[] = [];
 
@@ -130,9 +120,6 @@ class CLISyncBridge extends EventEmitter {
     }
   }
 
-  /**
-   * Sync tools from Qwen CLI
-   */
   async syncQwenTools(): Promise<CLITool[]> {
     const config = this.supportedCLIs.get('qwen');
 
@@ -142,8 +129,13 @@ class CLISyncBridge extends EventEmitter {
     }
 
     try {
-      const output = execSync('qwen list-tools --format=json', { encoding: 'utf-8' });
-      const tools = JSON.parse(output);
+      const res = await runCommand('qwen', ['list-tools', '--format=json']);
+      if (!res.success) {
+        console.warn('Failed to query qwen tools:', res.stderr);
+        return [];
+      }
+      let tools = [];
+      try { tools = JSON.parse(res.stdout || '[]'); } catch (e) { tools = []; }
 
       const syncedTools: CLITool[] = [];
 
@@ -170,9 +162,6 @@ class CLISyncBridge extends EventEmitter {
     }
   }
 
-  /**
-   * Sync tools from Claude Code
-   */
   async syncClaudeTools(): Promise<CLITool[]> {
     const config = this.supportedCLIs.get('claude');
 
@@ -182,8 +171,13 @@ class CLISyncBridge extends EventEmitter {
     }
 
     try {
-      const output = execSync('claude tools --json', { encoding: 'utf-8' });
-      const tools = JSON.parse(output);
+      const res = await runCommand('claude', ['tools', '--json']);
+      if (!res.success) {
+        console.warn('Failed to query claude tools:', res.stderr);
+        return [];
+      }
+      let tools = [];
+      try { tools = JSON.parse(res.stdout || '[]'); } catch (e) { tools = []; }
 
       const syncedTools: CLITool[] = [];
 
@@ -210,9 +204,6 @@ class CLISyncBridge extends EventEmitter {
     }
   }
 
-  /**
-   * Execute synced CLI tool
-   */
   async executeCliTool(toolId: string, args: Record<string, any>): Promise<any> {
     const tool = this.syncedTools.get(toolId);
 
@@ -221,7 +212,6 @@ class CLISyncBridge extends EventEmitter {
     }
 
     try {
-      // Build command with arguments
       let command = tool.command;
 
       for (const [key, value] of Object.entries(args)) {
@@ -230,13 +220,18 @@ class CLISyncBridge extends EventEmitter {
 
       console.log(`Executing: ${command}`);
 
-      const output = execSync(command, { encoding: 'utf-8' });
+      const [cmd, ...cmdArgs] = command.split(' ');
+      const res = await runCommand(cmd, cmdArgs);
 
-      this.emit('cli:tool:executed', { toolId, output });
+      if (!res.success) {
+        throw new Error(res.stderr || res.error);
+      }
+
+      this.emit('cli:tool:executed', { toolId, output: res.stdout });
 
       return {
         success: true,
-        output,
+        output: res.stdout,
       };
     } catch (error: any) {
       this.emit('cli:tool:error', { toolId, error: error.message });
@@ -248,9 +243,6 @@ class CLISyncBridge extends EventEmitter {
     }
   }
 
-  /**
-   * Setup auto-sync for a CLI
-   */
   setupAutoSync(cli: string, intervalMinutes: number = 60) {
     if (this.syncIntervals.has(cli)) {
       clearInterval(this.syncIntervals.get(cli)!);
@@ -273,9 +265,6 @@ class CLISyncBridge extends EventEmitter {
     console.log(`✓ Auto-sync enabled for ${cli} (every ${intervalMinutes} minutes)`);
   }
 
-  /**
-   * Disable auto-sync for a CLI
-   */
   disableAutoSync(cli: string) {
     const interval = this.syncIntervals.get(cli);
 
@@ -286,23 +275,14 @@ class CLISyncBridge extends EventEmitter {
     }
   }
 
-  /**
-   * Get all synced tools
-   */
   getSyncedTools(): CLITool[] {
     return Array.from(this.syncedTools.values());
   }
 
-  /**
-   * Get synced tools by CLI
-   */
   getSyncedToolsByCLI(cli: string): CLITool[] {
     return Array.from(this.syncedTools.values()).filter((tool) => tool.cli === cli);
   }
 
-  /**
-   * Export synced tools as Echoctl plugins
-   */
   exportAsPlugins() {
     const plugins: Record<string, any> = {};
 
@@ -333,9 +313,6 @@ class CLISyncBridge extends EventEmitter {
     return plugins;
   }
 
-  /**
-   * Sync all available CLIs
-   */
   async syncAll(): Promise<void> {
     console.log('🔄 Syncing all available CLIs...');
 
@@ -354,9 +331,6 @@ class CLISyncBridge extends EventEmitter {
     console.log('✓ All CLIs synced successfully');
   }
 
-  /**
-   * Get sync status
-   */
   getSyncStatus() {
     return {
       installedCLIs: this.getInstalledCLIs(),
