@@ -1,3 +1,4 @@
-## 2024-05-15 - [MCP Tool Loading Optimization]
-**Learning:** MCP tool loading in `getAllTools` was sequential, causing linear latency growth with the number of servers. Parallelization and caching significantly reduce this.
-**Action:** Always consider parallelizing independent network/IPC calls and implement caching for frequently accessed data that changes infrequently. Keep internal state encapsulation (private/protected) unless public access is strictly necessary.
+
+## 2026-03-22 - [Git Tool Performance & CI Fix]
+**Learning:** Consolidating sequential shell commands into 'Promise.all' or batching arguments (like 'git add file1 file2') drastically reduces overhead from process spawning. Also discovered that CI can fail if 'package-lock.json' is out of sync or if required utility files (like 'BDIHaltingGuards.ts') are missing from the source tree.
+**Action:** Always verify local builds and 'package-lock.json' consistency before submission. Ensure all referenced local modules are actually present in the 'src' directory.
