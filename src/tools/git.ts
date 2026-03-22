@@ -60,29 +60,34 @@ export async function isGitRepo(cwd: string = process.cwd()): Promise<boolean> {
 
 /**
  * Get git status
- * Performance: Consolidated 5 sequential git calls into a parallel Promise.all (by Bolt ⚡)
  */
 export async function getGitStatus(cwd: string = process.cwd()): Promise<GitStatus> {
   try {
-    // Run all status checks in parallel to minimize latency
-    const [branchRes, remoteRes, changedRes, stagedRes, untrackedRes] = await Promise.all([
-      execAsync('git branch --show-current', { cwd }),
-      execAsync('git rev-list --left-right --count origin/HEAD...HEAD 2>/dev/null || echo "0\t0"', { cwd }),
-      execAsync('git diff --name-only', { cwd }),
-      execAsync('git diff --cached --name-only', { cwd }),
-      execAsync('git ls-files --others --exclude-standard', { cwd }),
-    ]);
+    // Get current branch
+    const { stdout: branchOut } = await execAsync('git branch --show-current', { cwd });
+    const branch = branchOut.trim();
 
-    const branch = branchRes.stdout.trim();
-
+    // Get ahead/behind
+    const { stdout: remoteOut } = await execAsync(
+      'git rev-list --left-right --count origin/HEAD...HEAD 2>/dev/null || echo "0\t0"',
+      { cwd }
+    );
     // git rev-list --left-right returns [remote_count, local_count]
     // remote_count = commits on remote not in local = behind
     // local_count = commits on local not in remote = ahead
-    const [behind, ahead] = remoteRes.stdout.trim().split('\t').map(Number);
+    const [behind, ahead] = remoteOut.trim().split('\t').map(Number);
 
-    const changed = changedRes.stdout.trim().split('\n').filter(Boolean);
-    const staged = stagedRes.stdout.trim().split('\n').filter(Boolean);
-    const untracked = untrackedRes.stdout.trim().split('\n').filter(Boolean);
+    // Get changed files
+    const { stdout: changedOut } = await execAsync('git diff --name-only', { cwd });
+    const changed = changedOut.trim().split('\n').filter(Boolean);
+
+    // Get staged files
+    const { stdout: stagedOut } = await execAsync('git diff --cached --name-only', { cwd });
+    const staged = stagedOut.trim().split('\n').filter(Boolean);
+
+    // Get untracked files
+    const { stdout: untrackedOut } = await execAsync('git ls-files --others --exclude-standard', { cwd });
+    const untracked = untrackedOut.trim().split('\n').filter(Boolean);
 
     return {
       branch,
@@ -100,27 +105,27 @@ export async function getGitStatus(cwd: string = process.cwd()): Promise<GitStat
 
 /**
  * Get diff for a file
- * Performance: Parallelized individual file diffing using Promise.all (by Bolt ⚡)
  */
 export async function getGitDiff(file?: string, cwd: string = process.cwd()): Promise<GitDiff[]> {
   try {
     const files = file ? [file] : (await getGitStatus(cwd)).changed;
-    if (files.length === 0) return [];
+    const diffs: GitDiff[] = [];
 
-    // Run diffs in parallel for multiple files
-    return await Promise.all(files.map(async (f) => {
+    for (const f of files) {
       const { stdout } = await execAsync(`git diff "${f}"`, { cwd });
       
       const additions = (stdout.match(/^\+[^+]/gm) || []).length;
       const deletions = (stdout.match(/^-[^-]/gm) || []).length;
 
-      return {
+      diffs.push({
         file: f,
         additions,
         deletions,
         patch: stdout,
-      };
-    }));
+      });
+    }
+
+    return diffs;
   } catch (error: any) {
     throw new Error(`Failed to get git diff: ${error.message}`);
   }
@@ -128,15 +133,13 @@ export async function getGitDiff(file?: string, cwd: string = process.cwd()): Pr
 
 /**
  * Stage files
- * Performance: Batched multiple file additions into a single command (by Bolt ⚡)
  */
 export async function gitAdd(files: string | string[], cwd: string = process.cwd()): Promise<void> {
   const fileList = Array.isArray(files) ? files : [files];
-  if (fileList.length === 0) return;
   
-  // Quote filenames to handle spaces and join them into a single command
-  const quotedFiles = fileList.map(f => `"${f}"`).join(' ');
-  await execAsync(`git add ${quotedFiles}`, { cwd });
+  for (const file of fileList) {
+    await execAsync(`git add "${file}"`, { cwd });
+  }
 }
 
 /**
