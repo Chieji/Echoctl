@@ -21,7 +21,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "lint": "echo \"Lint coming soon\" && exit 0",
     "prepublishOnly": "npm run build",
-    "postinstall": "echo \"✓ Echo CLI installed! Run 'echo --help' to get started.\""
+    "postinstall": "echo \"\u2713 Echo CLI installed! Run 'echo --help' to get started.\""
   },
   "keywords": [
     "cli",
@@ -93,6 +93,9 @@
     "collectCoverageFrom": [
       "src/**/*.ts",
       "!src/**/*.d.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(chalk|conf|lowdb|octokit|@octokit|boxen|ora|gradient-string|ink|ink-spinner|ink-text-input|figlet|cli-highlight|cli-table3|enquirer|boxen|ws|uuid|axios)/)"
     ]
   },
   "files": [

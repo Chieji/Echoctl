@@ -140,6 +140,32 @@ export async function runCommand(
       };
     }
 
+    // 1b. Block known dangerous command+argument combinations
+    const fullCommand = [cmd, ...args].join(' ');
+    const DANGEROUS_PATTERNS = [
+      /^chmod\s.*\s\/$/,           // chmod targeting root
+      /^chmod\s+-R\s+777\s+\//,    // chmod -R 777 /
+      /^kill\s+-9\s+1$/,            // kill init process
+      /^kill\s+-9\s+1\b/,           // kill -9 1 (PID 1)
+      /^dd\s+if=\/dev\//,           // dd from device
+      /^mkfs/,                       // format filesystem
+      /:\(\)\{:\|:&\};:/,            // fork bomb
+      /wget.*\|.*sh/,               // wget pipe to sh
+      /curl.*\|.*sh/,               // curl pipe to sh
+      /history\s+-c/,               // clear history
+      /\.bash_history/,             // bash history file
+      /unset\s+PATH/,               // unset PATH
+    ];
+    for (const pattern of DANGEROUS_PATTERNS) {
+      if (pattern.test(fullCommand)) {
+        return {
+          success: false,
+          output: '',
+          error: `Security: Dangerous command pattern blocked: ${cmd}`,
+        };
+      }
+    }
+
     // 2. Validate each argument
     for (const arg of args) {
       if (!validateArgument(cmd, arg)) {

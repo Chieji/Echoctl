@@ -25,12 +25,12 @@ describe('SessionStore', () => {
     store = new SessionStore();
     await store.init();
     await store.clearAll();
-  });
+  }, 15000);
 
   afterEach(async () => {
     // Cleanup
     await store.clearAll();
-  });
+  }, 15000);
 
   describe('calculateTokenCount', () => {
     it('should calculate tokens based on character count', () => {

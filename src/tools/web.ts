@@ -71,6 +71,12 @@ export async function searchWeb(query: string, limit: number = 10): Promise<Sear
 
     return results;
   } catch (error: any) {
+    // Return empty array on network errors (e.g., timeout, no connectivity)
+    // so callers can handle gracefully rather than crashing
+    if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND' || 
+        error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+      return [];
+    }
     throw new Error(`Web search failed: ${error.message}`);
   }
 }

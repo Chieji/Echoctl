@@ -340,7 +340,7 @@ export class BrainStore {
         mostAccessed = memory;
       }
       
-      if (memory.updatedAt > recentlyUpdated.updatedAt) {
+      if (memory.updatedAt >= recentlyUpdated.updatedAt) {
         recentlyUpdated = memory;
       }
     }

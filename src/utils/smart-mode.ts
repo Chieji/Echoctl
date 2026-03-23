@@ -139,9 +139,9 @@ export function classifyTask(input: string): TaskType {
   let classified: TaskType = 'general';
 
   for (const [taskType, score] of Object.entries(scores)) {
-    // Weight code tasks higher if equal
-    const currentWeight = taskType === 'code' ? score * 1.5 : score;
-    const maxWeight = classified === 'code' ? maxScore * 1.5 : maxScore;
+    // Weight code tasks higher so explicit code keywords dominate mixed inputs
+    const currentWeight = taskType === 'code' ? score * 3.0 : score;
+    const maxWeight = classified === 'code' ? maxScore * 3.0 : maxScore;
 
     if (currentWeight > maxWeight) {
       maxScore = score;
