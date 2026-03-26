@@ -1,14 +1,50 @@
 # 🎙️ Echo CLI - Infinite Echoes of Intelligence
 
 <div align="center">
+
   <img src="https://raw.githubusercontent.com/chieji/echoctl/main/assets/logo.png" alt="Echo Logo" width="200" />
+  
   <p><i>"Your thoughts. My echo. Infinite possibility."</i></p>
 
   [![Version](https://img.shields.io/badge/version-1.1.0-FF69B4.svg?style=for-the-badge)](https://github.com/chieji/echoctl)
   [![License](https://img.shields.io/badge/license-MIT-61dafb.svg?style=for-the-badge)](LICENSE)
   [![BuiltWithLove](https://img.shields.io/badge/built%20with-❤️-red.svg?style=for-the-badge)](#-built-with-love)
   [![PRsWelcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
+  
+  [![ECHOMEN](https://img.shields.io/badge/Web%20UI-ECHOMEN-06b6d4?style=for-the-badge&logo=react)](https://github.com/Chieji/ECHOMEN)
+
 </div>
+
+---
+
+## 🎯 What is Echoctl?
+
+**Echoctl** is the **CLI brain** of the **ECHO Platform** - a complete AI agent orchestration system.
+
+### ECHO Platform Components
+
+| Component | Description | Repository |
+|-----------|-------------|------------|
+| **Echoctl** | CLI brain with BDI engine, 14+ AI providers, multi-layer memory | ← You are here |
+| **ECHOMEN** | Web dashboard for visual agent management, real-time monitoring | [→ View ECHOMEN](https://github.com/Chieji/ECHOMEN) |
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ECHO Platform                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────┐         ┌──────────────────────┐ │
+│  │   ECHOMEN (Web UI)   │◄───────►│   Echoctl (CLI)      │ │
+│  │  - Dashboard         │  WebSocket│  - BDI Engine      │ │
+│  │  - Agent Management  │  Bridge  │  - 14+ Providers   │ │
+│  │  - Browser Automation│          │  - Multi-layer Mem │ │
+│  │  - Knowledge Graph   │          │  - Tool Execution  │ │
+│  └──────────────────────┘         └──────────────────────┘ │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+> 💡 **Tip:** Use Echoctl standalone for CLI workflows, or connect to ECHOMEN for a visual web dashboard with real-time monitoring, browser automation, and knowledge graph management.
 
 ---
 
@@ -42,7 +78,7 @@ Instantly harvest and sync tools from **Model Context Protocol (MCP)** servers a
 
 ## 🚀 Quick Start
 
-### Installation
+### Option 1: Echoctl Only (CLI Mode)
 
 ```bash
 # Clone the repository
@@ -57,6 +93,41 @@ npm link
 # Launch the Magic
 echo "What's the meaning of life?"
 ```
+
+### Option 2: Echoctl + ECHOMEN (Full Platform)
+
+For the complete experience with web dashboard, real-time monitoring, and browser automation:
+
+```bash
+# 1. Install Echoctl (CLI Brain)
+git clone https://github.com/Chieji/Echoctl.git
+cd Echoctl
+npm install
+npm link
+
+# 2. Install ECHOMEN (Web Dashboard)
+cd ..
+git clone https://github.com/Chieji/ECHOMEN.git
+cd ECHOMEN
+pnpm install
+
+# 3. Configure ECHOMEN
+cp .env.example .env.local
+# Edit .env.local with your API keys and database URL
+
+# 4. Initialize database
+pnpm db:push
+
+# 5. Start Echoctl Server (in separate terminal)
+echoctl serve --ws-port 8080
+
+# 6. Start ECHOMEN Web Server
+pnpm dev
+```
+
+Open `http://localhost:3000` to access the web dashboard.
+
+**→ See [ECHOMEN README](https://github.com/Chieji/ECHOMEN#readme) for detailed setup instructions.**
 
 ### 🏎️ Pro Usage
 
