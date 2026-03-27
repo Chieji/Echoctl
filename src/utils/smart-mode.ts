@@ -47,13 +47,13 @@ const TASK_KEYWORDS: Record<TaskType, string[]> = {
     'branch',
     'merge',
     'pull request',
-    'script',
   ],
   creative: [
     'write',
     'story',
     'poem',
     'song',
+    'script',
     'blog',
     'article',
     'essay',
@@ -140,8 +140,8 @@ export function classifyTask(input: string): TaskType {
 
   for (const [taskType, score] of Object.entries(scores)) {
     // Weight code tasks higher if equal
-    const currentWeight = taskType === 'code' ? score * 2.5 : score;
-    const maxWeight = classified === 'code' ? maxScore * 2.5 : maxScore;
+    const currentWeight = taskType === 'code' ? score * 1.5 : score;
+    const maxWeight = classified === 'code' ? maxScore * 1.5 : maxScore;
 
     if (currentWeight > maxWeight) {
       maxScore = score;

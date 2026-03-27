@@ -76,10 +76,10 @@ export class BoxStore {
 
       if (existingFile) {
         // Update existing file
-        await this.client.files.uploadNewFileVersion(existingFile.id, new Uint8Array(content));
+        await this.client.files.uploadNewFileVersion(existingFile.id, content);
       } else {
         // Upload new file
-        await this.client.files.uploadFile(this.folderId, fileName, new Uint8Array(content));
+        await this.client.files.uploadFile(this.folderId, fileName, content);
       }
 
       return true;
@@ -111,7 +111,7 @@ export class BoxStore {
         stream.on('data', (chunk: any) => chunks.push(chunk));
         stream.on('end', async () => {
           const content = Buffer.concat(chunks);
-          await writeFile(localPath, new Uint8Array(content));
+          await writeFile(localPath, content);
           resolve(true);
         });
         stream.on('error', (err: any) => reject(err));
