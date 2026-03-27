@@ -87,7 +87,7 @@ export async function browserScreenshot(savePath?: string): Promise<BrowserResul
     let savedPath: string | undefined;
     if (savePath) {
       const { writeFile } = await import('fs/promises');
-      await writeFile(savePath, new Uint8Array(screenshot));
+      await writeFile(savePath, screenshot);
       savedPath = savePath;
     }
 
