@@ -126,6 +126,11 @@ class PluginManager {
         throw new Error('package.json missing echo.plugin=true marker');
       }
 
+      const existing = this.plugins.get(packageJson.name);
+      if (existing) {
+        return existing;
+      }
+
       const mainPath = resolve(pluginPath, packageJson.main || 'index.js');
       if (!this.isWithinTrustedRoot(mainPath)) {
         throw new Error(`Plugin entrypoint is outside trusted roots: ${mainPath}`);
