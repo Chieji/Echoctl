@@ -99,7 +99,7 @@ export class ConfigStore {
               // Move the corrupted file away
               // We use try/catch because we might have permission issues
               const content = readFileSync(configPath);
-              writeFileSync(backupPath, content);
+              writeFileSync(backupPath, new Uint8Array(content));
               // Instead of deleting, we'll try to re-initialize Conf which will overwrite or create new
               // But Conf might still be unhappy. Let's try to write a fresh empty object to the file first.
               writeFileSync(configPath, JSON.stringify({}));

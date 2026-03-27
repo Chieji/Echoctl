@@ -23,6 +23,9 @@ interface MemoryNode {
 export class LongTermMemory {
   private nodes: MemoryNode[] = [];
   private readonly storagePath: string;
+  // In-memory cache to skip redundant Gemini API calls (Performance: Bolt ⚡)
+  // This reduces latency for repeated queries in the same session.
+  private embeddingCache: Map<string, number[]> = new Map();
 
   constructor() {
     this.storagePath = join(homedir(), '.config', 'echo-cli-nodejs', 'semantic-memory.json');
@@ -82,6 +85,11 @@ export class LongTermMemory {
   }
 
   private async getEmbedding(text: string): Promise<number[]> {
+    // Return cached result if available to reduce network latency (Performance: Bolt ⚡)
+    if (this.embeddingCache.has(text)) {
+      return this.embeddingCache.get(text)!;
+    }
+
     const config = getConfig();
     const apiKey = config.getApiKey('gemini');
     
@@ -94,25 +102,45 @@ export class LongTermMemory {
       content: { parts: [{ text }] }
     });
 
-    return response.data.embedding.values;
+    // Normalize vector to unit length and cache (Performance: Bolt ⚡)
+    // Unit vectors allow using simple dot product instead of full cosine similarity.
+    const vector = this.normalize(response.data.embedding.values);
+    this.embeddingCache.set(text, vector);
+    return vector;
   }
 
+  /**
+   * Normalizes a vector to unit length (magnitude of 1.0)
+   */
+  private normalize(v: number[]): number[] {
+    const magnitude = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+    return magnitude > 0 ? v.map(val => val / magnitude) : v;
+  }
+
+  /**
+   * Calculate similarity using dot product
+   * Performance: Simplified from cosine to dot product as vectors are pre-normalized (by Bolt ⚡)
+   * Impact: Reduces complexity by eliminating Math.sqrt and divisions in similarity search loop.
+   */
   private cosineSimilarity(v1: number[], v2: number[]): number {
     let dotProduct = 0;
-    let mag1 = 0;
-    let mag2 = 0;
     for (let i = 0; i < v1.length; i++) {
       dotProduct += v1[i] * v2[i];
-      mag1 += v1[i] * v1[i];
-      mag2 += v2[i] * v2[i];
     }
-    return dotProduct / (Math.sqrt(mag1) * Math.sqrt(mag2));
+    return dotProduct;
   }
 
   private load(): void {
     if (existsSync(this.storagePath)) {
       try {
         this.nodes = JSON.parse(readFileSync(this.storagePath, 'utf8'));
+
+        // Ensure all loaded vectors are normalized to unit length for fast dot product (by Bolt ⚡)
+        for (const node of this.nodes) {
+          if (node.vector && node.vector.length > 0) {
+            node.vector = this.normalize(node.vector);
+          }
+        }
       } catch {
         this.nodes = [];
       }
