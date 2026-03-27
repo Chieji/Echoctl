@@ -9,30 +9,41 @@ import Conf from 'conf';
 import crypto from 'crypto';
 import { homedir } from 'os';
 import { join } from 'path';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import os from 'os';
+import { existsSync, readFileSync, writeFileSync, chmodSync, mkdirSync } from 'fs';
 import chalk from 'chalk';
 import { AppConfig, ProviderConfig, ProviderName, BoxConfig, GithubConfig, MountSource } from '../types/index.js';
 
 /**
- * Generate a secure encryption key from machine-specific identifiers
- * This ensures each machine has a unique encryption key
+ * Generate (or load) a strong persistent encryption key.
+ * Key is random and stored with restricted permissions.
  */
 function deriveEncryptionKey(): string {
-  // Combine machine-specific identifiers
-  const components = [
-    homedir(),           // User home directory
-    process.platform,    // OS platform
-    process.arch,        // CPU architecture
-    os.hostname() || 'unknown',  // Machine hostname
-  ];
-  
-  const seed = components.join('|');
-  
-  // Create a 32-byte key using SHA-256
-  const hash = crypto.createHash('sha256').update(seed).digest();
-  
-  return hash.toString('base64');
+  const configDir = join(homedir(), '.config', 'echo-cli-nodejs');
+  const keyPath = join(configDir, 'encryption.key');
+
+  try {
+    if (existsSync(keyPath)) {
+      const existing = readFileSync(keyPath, 'utf-8').trim();
+      if (existing.length > 0) {
+        return existing;
+      }
+    }
+
+    mkdirSync(configDir, { recursive: true });
+    const key = crypto.randomBytes(32).toString('base64');
+    writeFileSync(keyPath, key, { mode: 0o600 });
+
+    try {
+      chmodSync(keyPath, 0o600);
+    } catch {
+      // Best-effort hardening only.
+    }
+
+    return key;
+  } catch {
+    // Last-resort ephemeral key to avoid plaintext fallback.
+    return crypto.randomBytes(32).toString('base64');
+  }
 }
 
 /**

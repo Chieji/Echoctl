@@ -16,12 +16,12 @@
     "build": "./build.sh",
     "start": "node dist/index.js",
     "dev": "npm run build && node dist/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --runInBand",
     "lint": "echo \"Lint coming soon\" && exit 0",
     "prepublishOnly": "npm run build",
-    "postinstall": "echo \"✓ Echo CLI installed! Run 'echo --help' to get started.\""
+    "postinstall": "echo \"\u2713 Echo CLI installed! Run 'echo --help' to get started.\""
   },
   "keywords": [
     "cli",
