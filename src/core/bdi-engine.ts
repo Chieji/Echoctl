@@ -9,7 +9,7 @@ import { Executor } from './executor.js';
 import { Observer } from './observer.js';
 import { Reflector } from './reflector.js';
 import { Learner } from './learner.js';
-import { BDIHaltingGuards } from '../lib/BDIHaltingGuards.js';
+import { BDIHaltingGuards, DEFAULT_CONFIGS } from '../lib/BDIHaltingGuards.js';
 
 export interface BDIResult {
   result: string;
@@ -27,7 +27,7 @@ export class BDIEngine {
   private beliefs: Beliefs;
   private intentions: Intention[];
   private currentState: CognitiveState = CognitiveState.IDLE;
-  private guards = new BDIHaltingGuards();
+  private guards = new BDIHaltingGuards(DEFAULT_CONFIGS.BALANCED);
 
   // Cognitive Modules
   private perceptor = new Perceptor();
@@ -73,13 +73,14 @@ export class BDIEngine {
 
     updateState(CognitiveState.IDLE, 0);
     this.guards.reset();
+    this.guards.incrementIteration();
     console.log(chalk.bold.magenta('\n🧠 BDI Cognitive Cycle Initiated'));
 
     // 1. PERCEIVE: Update Beliefs
     updateState(CognitiveState.PERCEIVE, 0.1);
     this.beliefs = await this.perceptor.perceive(task, this.beliefs);
 
-    if (this.guards.shouldHalt(this.beliefs)) {
+    if (!this.guards.shouldContinue()) {
       return this.haltResult('Halted during perception');
     }
 

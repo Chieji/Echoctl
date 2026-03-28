@@ -1,178 +1,485 @@
-# 🎙️ Echo CLI - Infinite Echoes of Intelligence
-
 <div align="center">
-
-  <img src="https://raw.githubusercontent.com/chieji/echoctl/main/assets/logo.png" alt="Echo Logo" width="200" />
+  <img src="./public/echo-logo.svg" alt="ECHO Logo" width="400" />
   
-  <p><i>"Your thoughts. My echo. Infinite possibility."</i></p>
-
-  [![Version](https://img.shields.io/badge/version-1.1.0-FF69B4.svg?style=for-the-badge)](https://github.com/chieji/echoctl)
-  [![License](https://img.shields.io/badge/license-MIT-61dafb.svg?style=for-the-badge)](LICENSE)
-  [![BuiltWithLove](https://img.shields.io/badge/built%20with-❤️-red.svg?style=for-the-badge)](#-built-with-love)
-  [![PRsWelcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
+  <h3>Multi-Ecosystem AI CLI Agent</h3>
   
-  [![ECHOMEN](https://img.shields.io/badge/Web%20UI-ECHOMEN-06b6d4?style=for-the-badge&logo=react)](https://github.com/Chieji/ECHOMEN)
-
+  <p>
+    <a href="https://github.com/chieji/echoctl"><img src="https://img.shields.io/badge/status-production--ready-green" alt="Status" /></a>
+    <a href="https://www.npmjs.com/package/echo-ai-cli"><img src="https://img.shields.io/npm/v/echo-ai-cli" alt="npm" /></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%3E%3D18-blue" alt="Node.js" /></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-blue" alt="TypeScript" /></a>
+    <a href="https://github.com/chieji/echoctl/blob/main/LICENSE"><img src="https://img.shields.io/github/license/chieji/echoctl" alt="License" /></a>
+  </p>
+  
+  <p>
+    <a href="https://github.com/chieji/ECHOMEN"><strong>Frontend Repo »</strong></a> •
+    <a href="#features">Features</a> •
+    <a href="#installation">Installation</a> •
+    <a href="#usage">Usage</a> •
+    <a href="#extensions">Extensions</a>
+  </p>
+  
+  <p>
+    <code>npm install -g echo-ai-cli</code>
+  </p>
 </div>
 
 ---
 
-## 🎯 What is Echoctl?
+## 🚀 What is Echoctl?
 
-**Echoctl** is the **CLI brain** of the **ECHO Platform** - a complete AI agent orchestration system.
+**Echoctl** (Echo CLI) is a terminal-based AI agent that brings the power of ECHOMEN to your command line. It's not just another AI chatbot — it's a resilient, multi-provider agentic system that can execute real tasks on your machine.
 
-### ECHO Platform Components
+### The Problem Echoctl Solves
 
-| Component | Description | Repository |
-|-----------|-------------|------------|
-| **Echoctl** | CLI brain with BDI engine, 14+ AI providers, multi-layer memory | ← You are here |
-| **ECHOMEN** | Web dashboard for visual agent management, real-time monitoring | [→ View ECHOMEN](https://github.com/Chieji/ECHOMEN) |
+Most AI CLIs lock you into one provider. Echoctl is different:
+- ✅ **14 AI Providers**: Switch between Gemini, Claude, GPT-4, Qwen, Groq, and more
+- ✅ **Extension System**: Import skills from Claude, Gemini, Qwen, or build your own
+- ✅ **Zero-Config Tools**: Web search, Wikipedia, weather — no API keys needed
+- ✅ **Smart Failover**: If one AI fails, automatically tries the next
+- ✅ **MCP Compatible**: Works with Model Context Protocol servers
 
+---
+
+## ✨ Features
+
+### 🤖 Multi-Provider AI Agent
+- **14 Supported Providers**:
+  - 🟦 Google Gemini
+  - 🟢 OpenAI GPT
+  - 🟠 Anthropic Claude
+  - 🟣 Alibaba Qwen
+  - 🔷 DeepSeek
+  - 🌙 Moonshot Kimi
+  - ⚡ Groq (Fast)
+  - 🦙 Ollama (Local)
+  - 🌐 OpenRouter (100+ models)
+  - 🚀 Together AI
+  - 🔴 ModelScope
+  - 🌪️ Mistral AI
+  - 🤗 Hugging Face
+  - 🐙 GitHub Models
+
+### 🔌 Extension Registry
+
+```bash
+# List all extensions
+echo extension list
+
+# Add a new extension
+echo extension add my-api https://api.example.com
+
+# Sync from Claude/Gemini
+echo extension sync --claude
+echo extension sync --gemini
+
+# Set auth for extensions
+echo extension auth weather-api apiKey=your-key
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ECHO Platform                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────────┐         ┌──────────────────────┐ │
-│  │   ECHOMEN (Web UI)   │◄───────►│   Echoctl (CLI)      │ │
-│  │  - Dashboard         │  WebSocket│  - BDI Engine      │ │
-│  │  - Agent Management  │  Bridge  │  - 14+ Providers   │ │
-│  │  - Browser Automation│          │  - Multi-layer Mem │ │
-│  │  - Knowledge Graph   │          │  - Tool Execution  │ │
-│  └──────────────────────┘         └──────────────────────┘ │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+
+### 🌐 Zero-Config Web Tools
+
+No API keys required:
+
+```bash
+# In agent mode:
+"Search for latest AI news"
+"Get Wikipedia summary of TypeScript"
+"What's the weather in Lagos?"
+"Show me top Hacker News stories"
 ```
 
-> 💡 **Tip:** Use Echoctl standalone for CLI workflows, or connect to ECHOMEN for a visual web dashboard with real-time monitoring, browser automation, and knowledge graph management.
+Built-in tools:
+- **Web Search**: DuckDuckGo integration
+- **Wikipedia**: Article search & summaries
+- **Reddit**: Posts from any subreddit
+- **Hacker News**: Top & new stories
+- **Weather**: Open-Meteo API
+- **Archive.org**: Check URL archives
+- **Web Scraping**: Extract content
+
+### 🎯 Interactive Commands
+
+```bash
+# Model picker (interactive)
+/models
+
+# List providers
+echo models list
+
+# Switch provider
+echo models set gemini
+
+# Extension management
+echo extension list
+echo extension add <name> <url>
+echo extension sync --all
+```
+
+### 🛡️ Safe Execution
+
+3-tier sandbox protects your system:
+- **Tier 1**: Pure computation (auto-execute)
+- **Tier 2**: DOM manipulation (sandboxed)
+- **Tier 3**: Full access (requires approval)
 
 ---
 
-## 🌟 What is Echo?
+## 📦 Installation
 
-Echo is not just another CLI; it's a **Resilient Agentic Terminal** designed to be your ultimate cognitive partner. Built on a sophisticated **BDI (Belief-Desire-Intention)** engine, Echo reasons, acts, and observes like a true autonomous agent.
+### Option 1: Docker (For Server Deployment)
 
-Whether you're debugging complex code, generating stunning visuals, or transcribing audio on the fly, Echo echoes your intent with surgical precision.
+```bash
+# Pull the image
+docker pull chieji/echoctl:latest
 
-### ❤️ Built with Love & Big Heart
-This project was born out of a passion for making AI accessible, transparent, and collaborative. Echo is an open ecosystem—a "big heart" project where every contributor is a part of the soul. **It's not just mine; it belongs to everyone.**
+# Run with your API keys
+docker run -it --rm \
+  -e GEMINI_API_KEY=your_key \
+  -v ~/.echo-cli:/root/.config/echo-cli \
+  chieji/echoctl:latest \
+  echo repl
+```
+
+**Docker Compose:**
+
+```yaml
+version: '3.8'
+services:
+  echoctl:
+    image: chieji/echoctl:latest
+    container_name: echoctl
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ~/.echo-cli:/root/.config/echo-cli
+    stdin_open: true
+    tty: true
+```
 
 ---
 
-## ✨ Features that WOW
+### Option 2: npm (Recommended for Desktop)
 
-### 🤖 The ReAct Engine
-The heart of Echo. A continuous loop of **Reason → Act → Observe**. Echo doesn't just guess; it investigates your codebase, searches the web, and executes code to give you the truth.
+```bash
+# Install globally
+npm install -g echo-ai-cli
 
-### 🍱 Multi-Provider Mastery (14+ Models)
-Switch instantly between Gemini, OpenAI, Claude, Qwen, Groq, Ollama, and more. Echo even includes **Smart Mode** which auto-selects the best model for your specific task (Coding, Creative, or Nuance).
+# Verify installation
+echo --version
+```
 
-### 🛠️ New: Multimedia Tools
-- **🎙️ Voice**: High-fidelity transcription (`transcribe`) and crystal-clear text-to-speech (`speak`).
-- **🎨 Image**: State-of-the-art image generation (`generate`) and vision-based analysis (`analyze`).
-
-### 📦 The Master Thief (MCP & Plugin Sync)
-Instantly harvest and sync tools from **Model Context Protocol (MCP)** servers and other AI extensions. If Claude can do it, Echo can steal... er, *sync* it!
-
----
-
-## 🚀 Quick Start
-
-### Option 1: Echoctl Only (CLI Mode)
+### Option 2: From Source
 
 ```bash
 # Clone the repository
 git clone https://github.com/chieji/echoctl.git
 cd echoctl
 
-# Install & Build
+# Install dependencies
 npm install
+
+# Build
 npm run build
-npm link
 
-# Launch the Magic
-echo "What's the meaning of life?"
+# Link globally
+npm link
 ```
 
-### Option 2: Echoctl + ECHOMEN (Full Platform)
-
-For the complete experience with web dashboard, real-time monitoring, and browser automation:
+### Option 3: pnpm
 
 ```bash
-# 1. Install Echoctl (CLI Brain)
-git clone https://github.com/Chieji/Echoctl.git
-cd Echoctl
-npm install
-npm link
-
-# 2. Install ECHOMEN (Web Dashboard)
-cd ..
-git clone https://github.com/Chieji/ECHOMEN.git
-cd ECHOMEN
-pnpm install
-
-# 3. Configure ECHOMEN
-cp .env.example .env.local
-# Edit .env.local with your API keys and database URL
-
-# 4. Initialize database
-pnpm db:push
-
-# 5. Start Echoctl Server (in separate terminal)
-echoctl serve --ws-port 8080
-
-# 6. Start ECHOMEN Web Server
-pnpm dev
-```
-
-Open `http://localhost:3000` to access the web dashboard.
-
-**→ See [ECHOMEN README](https://github.com/Chieji/ECHOMEN#readme) for detailed setup instructions.**
-
-### 🏎️ Pro Usage
-
-```bash
-# Agent Mode: Autonomous task completion
-echo chat "Fix the broken tests in my auth module" --agent
-
-# Browser Power: Autonomous web research
-echo chat "Find the latest trends in React 19" --agent
-
-# Multimedia: Speak my thoughts
-echo "Hello World" --agent --speak
+pnpm add -g echo-ai-cli
 ```
 
 ---
 
-## 🛠️ Tool Inventory
+## ⚡ Quick Start
 
-| Category | Tools |
-|----------|-------|
-| 💻 **Code** | `runCommand`, `executeNode`, `executePython`, `lspTools` |
-| 🌍 **Web** | `searchWeb`, `scrapeUrl`, `browserTools` (Playwright) |
-| 🗄️ **Storage** | `brain` (Second Brain), `mount` (Knowledge Sources) |
-| 🐙 **GitHub** | `githubCreatePullRequest`, `githubCreateIssue`, `githubSearchRepos` |
-| 🎙️ **Media** | `transcribe`, `speak`, `generateImage`, `analyzeImage` |
+### 1. Configure Your First Provider
+
+```bash
+# Interactive setup
+echo auth login
+
+# Or configure directly
+echo auth gemini YOUR_API_KEY
+```
+
+### 2. Start a Chat Session
+
+```bash
+# Simple chat
+echo chat "Explain quantum computing"
+
+# Interactive REPL
+echo repl
+```
+
+### 3. Run Agent Mode
+
+```bash
+# Execute a task
+echo agent "List all Python files in this directory"
+
+# With specific provider
+echo agent --provider groq "Find all TODO comments in my code"
+```
 
 ---
 
-## 🤝 Join the Movement (Contributing)
+## 🎯 Usage
 
-We believe in the power of the open heart. Echo thrives on your contributions!
+### Chat Mode
 
-- **Got an idea?** Open a Feature Request.
-- **Found a bug?** Submit an Issue.
-- **Want to code?** Check out [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+# One-off question
+echo chat "What's the capital of France?"
 
-> "No be only me get am." — This is a community project. Let's build the future of agentic computing together.
+# Start interactive session
+echo repl
+
+# In REPL:
+> /help          # Show commands
+> /models        # Interactive model picker
+> /mode agent    # Switch to agent mode
+> /exit          # Exit REPL
+```
+
+### Agent Mode
+
+```bash
+# Simple task
+echo agent "Count lines of code in src/"
+
+# With options
+echo agent --yolo "Delete all node_modules directories"
+echo agent --plan "Analyze my project structure"
+```
+
+### Extension Commands
+
+```bash
+# List extensions
+echo extension list
+echo extension list --configured
+
+# Add extension
+echo extension add weather https://api.open-meteo.com
+
+# Sync from other AI systems
+echo extension sync --claude
+echo extension sync --gemini
+echo extension sync --all
+
+# Set auth
+echo extension auth my-api apiKey=xxx secret=yyy
+```
+
+### Model Management
+
+```bash
+# List all providers
+echo models list
+
+# Show only configured
+echo models list --configured
+
+# Set default
+echo models set gemini
+echo models set openai --model gpt-4o
+
+# Show current config
+echo models info
+```
+
+---
+
+## 🔗 Related Repos
+
+### ECHOMEN Ecosystem
+
+- **[ECHOMEN Frontend](https://github.com/chieji/ECHOMEN)** — Full-stack AI workstation
+  - Web-based UI
+  - Visual task pipeline
+  - Artifact viewer
+  - Settings dashboard
+
+### Architecture
+
+```
+┌──────────────────────────────────────────┐
+│            Echoctl CLI                    │
+├──────────────────────────────────────────┤
+│  REPL      │  Agent    │  Extensions    │
+│  Chat      │  Tools    │  MCP Client    │
+├──────────────────────────────────────────┤
+│         Provider Chain                     │
+│  Gemini │ Claude │ GPT │ Qwen │ Groq    │
+└──────────────────────────────────────────┘
+```
+
+---
+
+## 📖 Configuration
+
+### Config File Location
+
+```
+~/.config/echo-cli/config.json
+```
+
+### Example Configuration
+
+```json
+{
+  "defaultProvider": "gemini",
+  "defaultModel": "gemini-2.5-flash",
+  "providers": {
+    "gemini": {
+      "apiKey": "your-key-here"
+    },
+    "openai": {
+      "apiKey": "your-key-here"
+    }
+  }
+}
+```
+
+### Environment Variables
+
+```bash
+# Set API keys via environment
+export GEMINI_API_KEY=your_key
+export OPENAI_API_KEY=your_key
+
+# Custom config directory
+export ECHO_CONFIG_DIR=/path/to/config
+```
+
+---
+
+## 🛡️ Security
+
+### What Echoctl Does
+
+- ✅ API keys stored in encrypted config
+- ✅ Command allowlisting for shell execution
+- ✅ Path traversal prevention
+- ✅ SSRF protection for web requests
+- ✅ 3-tier code sandbox
+- ✅ User approval for dangerous operations
+
+### What Echoctl Doesn't Do
+
+- ❌ No arbitrary code execution without approval
+- ❌ No sending keys to third parties
+- ❌ No persistent storage of sensitive data in plaintext
+
+---
+
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](./docs/getting-started.md) | First steps with Echoctl |
+| [Extensions](./docs/extensions.md) | Building and using extensions |
+| [MCP Integration](./docs/mcp.md) | Model Context Protocol setup |
+| [Security](./docs/security.md) | Security model and best practices |
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for:
+- Development setup
+- Adding new providers
+- Building extensions
+- Testing guidelines
+
+---
+
+## 📊 Tech Stack
+
+- **TypeScript** — Type-safe development
+- **Commander.js** — CLI framework
+- **Enquirer** — Interactive prompts
+- **Chalk** — Terminal colors
+- **Ora** — Loading spinners
+- **Axios** — HTTP client
+- **Playwright** — Browser automation
+
+---
+
+## 🐛 Troubleshooting
+
+### "No providers configured"
+
+```bash
+# Run interactive setup
+echo auth login
+
+# Or configure manually
+echo auth gemini YOUR_KEY
+```
+
+### "Command not found: echo"
+
+```bash
+# Reinstall globally
+npm install -g echo-ai-cli
+
+# Check PATH
+echo $PATH | grep npm
+```
+
+### Extensions not loading
+
+```bash
+# Check config
+echo extension list
+
+# Re-sync
+echo extension sync --all
+```
+
+---
+
+## 📈 Roadmap
+
+### Q2 2026
+- [ ] Voice input support
+- [ ] Local LLM improvements
+- [ ] More MCP servers
+- [ ] Extension marketplace
+
+### Q3 2026
+- [ ] Team collaboration
+- [ ] Advanced analytics
+- [ ] Mobile app
+- [ ] Plugin SDK
+
+---
+
+## 🙏 Acknowledgments
+
+Inspired by:
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [Claude Code](https://claude.ai/code)
+- [Aider](https://aider.chat/)
+- [Continue.dev](https://continue.dev/)
 
 ---
 
 ## 📄 License
 
-MIT © [chieji](https://github.com/chieji) - See [LICENSE](LICENSE) for more details.
+MIT License — see [LICENSE](./LICENSE) for details.
+
+---
 
 <div align="center">
-    <b>Your thoughts. Our echo. Infinite possibility.</b><br>
-    <sub>built with love by the community</sub>
+  <p>Built with ❤️ by <a href="https://github.com/chieji">chieji</a></p>
+  <p>⭐ Star this repo if you find it useful!</p>
+  <p><a href="https://github.com/chieji/ECHOMEN">Check out the Frontend →</a></p>
 </div>

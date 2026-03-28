@@ -2,7 +2,7 @@
  * Base Provider interface and abstract class
  */
 
-import { IProvider, Message, ProviderName, ProviderResponse } from '../types';
+import { IProvider, Message, ProviderName, ProviderResponse } from '../types/index.js';
 
 /**
  * Abstract base class for all AI providers

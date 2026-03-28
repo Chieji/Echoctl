@@ -17,6 +17,10 @@ import { approveCommand } from './commands/approve.js';
 import { trackCommand } from './commands/track.js';
 import { agentRun, agentHealth, agentTools, agentMemory, agentPlan, agentLogs, agentConfig, agentDoctor } from './commands/agent.js';
 import { pluginSync, pluginSyncPlatform, pluginList, pluginInstall, pluginUninstall, pluginEnable, pluginDisable } from './commands/plugin.js';
+import { setupExtensionCommand } from './commands/extension.js';
+import { setupModelCommand } from './commands/models.js';
+import { getExtensionRegistry } from './extensions/registry.js';
+import { initializeMCPIntegration } from './mcp/integration.js';
 import { launchDashboard } from './commands/tui.js';
 import { setupMcpCommand } from './commands/mcp.js';
 import { setupMountCommand } from './commands/mount.js';
@@ -711,6 +715,8 @@ function createCLI(): Command {
   setupMcpCommand(program);
   setupMountCommand(program);
   registerConnectCommand(program);
+  setupExtensionCommand(program);
+  setupModelCommand(program);
 
 
   // ============================================================================
@@ -988,6 +994,15 @@ async function main(): Promise<void> {
     console.log(chalk.dim('\nThis is likely a bug. Please report it.\n'));
     process.exit(1);
   });
+
+  // Initialize MCP integration (register MCP tools as extensions)
+  if (process.argv.includes('agent') || process.argv.includes('repl')) {
+    // Load persisted extensions first
+    const registry = getExtensionRegistry();
+    await registry.loadFromPersistence();
+    
+    await initializeMCPIntegration();
+  }
 
   await program.parseAsync(process.argv);
 }

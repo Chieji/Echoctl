@@ -111,7 +111,7 @@ export class BoxStore {
         stream.on('data', (chunk: any) => chunks.push(chunk));
         stream.on('end', async () => {
           const content = Buffer.concat(chunks);
-          await writeFile(localPath, content);
+          await writeFile(localPath, content as any);
           resolve(true);
         });
         stream.on('error', (err: any) => reject(err));
