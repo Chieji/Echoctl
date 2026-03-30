@@ -1,5 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
-import { LongTermMemory } from '../memory/vector-memory.js';
+import { getLongTermMemory } from '../memory/vector-memory.js';
 import { TaskNode } from './bdi-types.js';
 
 /**
@@ -8,7 +8,7 @@ import { TaskNode } from './bdi-types.js';
  */
 export class Learner {
   private brainStore = getBrainStore();
-  private semanticMemory = new LongTermMemory();
+  private semanticMemory = getLongTermMemory();
 
   /**
    * Consolidate results from tasks into memory

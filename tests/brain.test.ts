@@ -285,8 +285,11 @@ describe('BrainStore', () => {
   describe('getStats', () => {
     it('should return statistics', async () => {
       await brain.save('key1', 'value1', ['tag1']);
+      brain.get('key1'); // Increment access count (also updates updatedAt)
+
+      // Add delay to ensure key2 has a strictly later updatedAt
+      await new Promise(r => setTimeout(r, 10));
       await brain.save('key2', 'value2', ['tag2']);
-      brain.get('key1'); // Increment access count
 
       const stats = brain.getStats();
 
