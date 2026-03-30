@@ -433,7 +433,19 @@ export * from './voice.js';
 export * from './image.js';
 
 // Add web tools to the tools object for ReAct engine
-import { searchWeb, scrapeUrl, getNews } from './web.js';
+import { 
+  searchWeb, 
+  scrapeUrl, 
+  getNews,
+  searchWikipedia,
+  getWikipediaSummary,
+  getRedditPosts,
+  searchReddit,
+  getHackerNewsTop,
+  getHackerNewsNew,
+  getWebArchive,
+  getWeatherByCity,
+} from './web.js';
 import { getGitStatus, gitAdd, gitAddAll, gitCommit, gitPush, gitLog } from './git.js';
 import { findAndReplace, searchInFiles, createFiles, updateFiles, deleteFiles, findFiles, getFileTree } from './multi-file.js';
 
@@ -441,6 +453,15 @@ export const webTools = {
   searchWeb,
   scrapeUrl,
   getNews,
+  // Zero-config APIs
+  searchWikipedia,
+  getWikipediaSummary,
+  getRedditPosts,
+  searchReddit,
+  getHackerNewsTop,
+  getHackerNewsNew,
+  getWebArchive,
+  getWeatherByCity,
 };
 
 export const gitTools = {

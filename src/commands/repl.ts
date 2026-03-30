@@ -29,6 +29,7 @@ interface ReplState {
   planMode: boolean;
   autoCommit: boolean;
   provider: ProviderName;
+  model: string;
   session: any;
 }
 
@@ -64,6 +65,7 @@ export async function startRepl(options: {
     planMode: options.plan || false,
     autoCommit: false,
     provider: options.provider || config.getDefaultProvider(),
+    model: 'auto',
     session: null,
   };
 
@@ -157,6 +159,7 @@ export async function startRepl(options: {
           console.log(`  ${chalk.cyan('/mode agent')}        Switch to tool-execution Agent Mode`);
           console.log(`  ${chalk.cyan('/mode chat')}         Switch to standard Chat Mode`);
           console.log(`  ${chalk.cyan('/mode plan')}         Switch to read-only exploration mode`);
+          console.log(`  ${chalk.cyan('/models')}            Interactive model/provider picker`);
           console.log(`  ${chalk.cyan('/yolo on|off')}       Toggle YOLO mode (no action confirmations - or use Ctrl+Y)`);
           console.log(`  ${chalk.cyan('/autocommit on|off')} Toggle Aider-style automatic git commits`);
           console.log(`  ${chalk.cyan('/provider <name>')}   Switch AI provider (gemini, claude, openai, groq, etc)`);
@@ -232,6 +235,15 @@ export async function startRepl(options: {
             console.log(chalk.green(`✓ Switched provider to: ${newProv}`));
           } else {
             console.log(chalk.red(`✗ Provider '${newProv}' is not configured.`));
+          }
+          break;
+
+        case '/models':
+          // Interactive model picker
+          const { showModelPicker } = await import('./models.js');
+          const selectedModel = await showModelPicker();
+          if (selectedModel) {
+            state.model = selectedModel;
           }
           break;
 

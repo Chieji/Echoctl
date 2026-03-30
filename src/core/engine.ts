@@ -109,9 +109,17 @@ Available tools (use EXACT names below):\n`;
 - deleteFile(filePath): Delete files/directories
 - executePython(code): Run Python code
 - executeNode(code): Run Node.js code
-- searchWeb(query, limit?): Search the web using DuckDuckGo
+- searchWeb(query, limit?): Search the web using DuckDuckGo (no API key)
 - scrapeUrl(url): Scrape content from a URL
 - getNews(query?, limit?): Get latest news headlines
+- searchWikipedia(query, limit?): Search Wikipedia articles (no API key)
+- getWikipediaSummary(title): Get Wikipedia page summary
+- getRedditPosts(subreddit, limit?, sort?): Get Reddit posts from subreddit
+- searchReddit(subreddit, query, limit?): Search Reddit posts
+- getHackerNewsTop(limit?): Get top Hacker News stories
+- getHackerNewsNew(limit?): Get newest Hacker News stories
+- getWebArchive(url): Check if URL is archived on Archive.org
+- getWeatherByCity(cityName): Get current weather for city
 - getGitStatus(cwd?): Get git repository status
 - gitAdd(files, cwd?): Stage files for commit
 - gitAddAll(cwd?): Stage all changes

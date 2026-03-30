@@ -112,8 +112,53 @@ export async function searchGoogle(
 
 /**
  * Scrape content from a URL
+ * SECURITY FIX: SSRF protection - validates URL before fetching
  */
 export async function scrapeUrl(url: string): Promise<ScrapedContent> {
+  // SECURITY: Validate URL - block private IPs and internal addresses
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Block private IP ranges and localhost
+    if (hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname === '::1' ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('172.16.') ||
+        hostname.startsWith('172.17.') ||
+        hostname.startsWith('172.18.') ||
+        hostname.startsWith('172.19.') ||
+        hostname.startsWith('172.20.') ||
+        hostname.startsWith('172.21.') ||
+        hostname.startsWith('172.22.') ||
+        hostname.startsWith('172.23.') ||
+        hostname.startsWith('172.24.') ||
+        hostname.startsWith('172.25.') ||
+        hostname.startsWith('172.26.') ||
+        hostname.startsWith('172.27.') ||
+        hostname.startsWith('172.28.') ||
+        hostname.startsWith('172.29.') ||
+        hostname.startsWith('172.30.') ||
+        hostname.startsWith('172.31.') ||
+        hostname === '169.254.169.254' || // AWS metadata
+        hostname.endsWith('.internal') ||
+        hostname.endsWith('.local')) {
+      throw new Error('SSRF protection: Access to internal addresses is blocked');
+    }
+
+    // Only allow HTTP and HTTPS
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error(`SSRF protection: Invalid protocol ${parsedUrl.protocol}. Only http: and https: are allowed.`);
+    }
+  } catch (error: any) {
+    if (error.message.includes('SSRF')) throw error;
+    if (error.code === 'ERR_INVALID_URL') throw new Error('Invalid URL provided');
+    throw error;
+  }
+
   try {
     const { data } = await axios.get(url, {
       headers: {
@@ -164,6 +209,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
 
 /**
  * Fetch and summarize RSS feed
+ * SECURITY FIX: SSRF protection - validates URL before fetching
  */
 export async function fetchRSS(url: string): Promise<Array<{
   title: string;
@@ -171,6 +217,50 @@ export async function fetchRSS(url: string): Promise<Array<{
   pubDate?: string;
   description?: string;
 }>> {
+  // SECURITY: Validate URL - block private IPs and internal addresses
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Block private IP ranges and localhost
+    if (hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname === '::1' ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('172.16.') ||
+        hostname.startsWith('172.17.') ||
+        hostname.startsWith('172.18.') ||
+        hostname.startsWith('172.19.') ||
+        hostname.startsWith('172.20.') ||
+        hostname.startsWith('172.21.') ||
+        hostname.startsWith('172.22.') ||
+        hostname.startsWith('172.23.') ||
+        hostname.startsWith('172.24.') ||
+        hostname.startsWith('172.25.') ||
+        hostname.startsWith('172.26.') ||
+        hostname.startsWith('172.27.') ||
+        hostname.startsWith('172.28.') ||
+        hostname.startsWith('172.29.') ||
+        hostname.startsWith('172.30.') ||
+        hostname.startsWith('172.31.') ||
+        hostname === '169.254.169.254' || // AWS metadata
+        hostname.endsWith('.internal') ||
+        hostname.endsWith('.local')) {
+      throw new Error('SSRF protection: Access to internal addresses is blocked');
+    }
+
+    // Only allow HTTP and HTTPS
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error(`SSRF protection: Invalid protocol ${parsedUrl.protocol}. Only http: and https: are allowed.`);
+    }
+  } catch (error: any) {
+    if (error.message.includes('SSRF')) throw error;
+    if (error.code === 'ERR_INVALID_URL') throw new Error('Invalid URL provided');
+    throw error;
+  }
+
   try {
     const { data } = await axios.get(url, {
       headers: {
@@ -250,10 +340,16 @@ export async function checkWebsite(url: string): Promise<{
  * Web tools export
  */
 export const webTools = {
+  // Search
   searchWeb,
   searchGoogle,
+  getNews,
+  
+  // Scraping
   scrapeUrl,
   fetchRSS,
-  getNews,
   checkWebsite,
 };
+
+// Re-export zero-config APIs
+export * from './zero-config-apis.js';
