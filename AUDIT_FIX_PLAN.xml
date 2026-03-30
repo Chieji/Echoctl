@@ -1,0 +1,238 @@
+<fix_plan>
+  <summary>
+    <project_overview>Echoctl is a TypeScript-first CLI/agent framework (plus a Python client package) that orchestrates LLM providers, local tools, browser automation, plugin loading, and persistent user/session state. The entrypoint and command handlers are monolithic; security-sensitive boundaries are concentrated in src/tools/executor.ts, src/tools/browser.ts, src/services/PluginManager.ts, src/utils/config.ts, and provider adapters.</project_overview>
+    <risk_assessment>The repository has multiple high-impact trust-boundary weaknesses (plugin/module loading, unrestricted navigation, destructive command surface), credential handling weaknesses, and maintainability issues that raise defect probability. Existing test artifacts are stale and runtime tests currently fail in this environment because Jest CLI resolution is broken.</risk_assessment>
+  </summary>
+
+  <issues>
+    <issue>
+      <id>SEC-001</id>
+      <severity>CRITICAL</severity>
+      <type>SECURITY</type>
+      <file>src/services/PluginManager.ts</file>
+      <location>discover(), load() lines 50-90</location>
+      <description>Plugin discovery/load executes arbitrary code from writable directories (e.g., ~/.echo/plugins and ./plugins) using require() with no signature verification, allowlist, sandboxing, or path ownership checks.</description>
+      <impact>Any attacker/process able to drop a plugin folder can execute arbitrary code at CLI startup/use, leading to full local compromise and credential exfiltration.</impact>
+      <recommended_fix>Introduce signed plugin manifests and trust policy: (1) require SHA-256+publisher signature verification before load, (2) enforce strict realpath boundary and owner/mode checks, (3) load plugins in a constrained worker process with IPC API instead of direct require(), (4) disable auto-load by default unless user explicitly enables each plugin.</recommended_fix>
+      <code_before><![CDATA[
+const packageJson = require(packageJsonPath);
+const mainPath = join(pluginPath, packageJson.main || 'index.js');
+const pluginModule = require(mainPath);
+]]></code_before>
+      <code_after><![CDATA[
+const manifest = await readAndVerifyManifest(pluginPath, trustedKeys);
+if (!manifest.verified) throw new Error('Untrusted plugin signature');
+const worker = new Worker(pluginRunnerPath, {
+  workerData: { entry: manifest.entry, policy: sandboxPolicy },
+  resourceLimits: { maxOldGenerationSizeMb: 64 }
+});
+const pluginProxy = await handshakePlugin(worker, manifest);
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>SEC-002</id>
+      <severity>HIGH</severity>
+      <type>SECURITY</type>
+      <file>src/tools/browser.ts</file>
+      <location>browserNavigate() lines 49-56</location>
+      <description>Unvalidated URL input is passed directly to Playwright page.goto(), allowing SSRF-like access to local/internal network endpoints and local file schemes if invoked by agent workflows.</description>
+      <impact>Agent/tool calls can probe internal services (e.g., metadata endpoints, localhost admin ports), leak sensitive HTML/data, and violate network trust boundaries.</impact>
+      <recommended_fix>Implement URL policy validation: allow only http/https, block localhost/private CIDRs/file/data schemes by default, optionally gate internal access behind explicit user approval flags.</recommended_fix>
+      <code_before><![CDATA[
+await page.goto(url, {
+  waitUntil: 'networkidle',
+  timeout: 30000
+});
+]]></code_before>
+      <code_after><![CDATA[
+const parsed = new URL(url);
+if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Protocol not allowed');
+if (isPrivateHost(parsed.hostname) && !opts.allowInternal) {
+  throw new Error('Internal hosts blocked by policy');
+}
+await page.goto(parsed.toString(), { waitUntil: 'domcontentloaded', timeout: 15000 });
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>SEC-003</id>
+      <severity>HIGH</severity>
+      <type>SECURITY</type>
+      <file>src/tools/executor.ts</file>
+      <location>ALLOWLISTED_COMMANDS lines 31-70, validateArgument() lines 91-113</location>
+      <description>The command allowlist includes destructive primitives (find -exec/-delete, chmod, chown, kill, git push) and argument validation treats any non-flag token as valid. This allows risky operations while giving a false sense of strict validation.</description>
+      <impact>Prompt-influenced tool calls can mutate/delete files, kill processes, or alter ownership/permissions; blast radius is larger than intended for an AI tool executor.</impact>
+      <recommended_fix>Replace token-level allowlist with command-specific schemas (zod/io-ts). Split commands into read-only vs mutating categories and require explicit approval for mutating commands. Remove -exec/-delete/kill/chown from default policy.</recommended_fix>
+      <code_before><![CDATA[
+'find': ['.', '-name', '-type', '-path', '-exec', '-delete'],
+...
+if (!arg.startsWith('-')) {
+  return true;
+}
+]]></code_before>
+      <code_after><![CDATA[
+const policies = {
+  find: z.tuple([z.literal('.'), z.literal('-name'), z.string()]),
+  ls: z.array(z.enum(['-l', '-a', '-h'])).optional(),
+};
+validateWithPolicy(commandName, argv);
+if (isMutatingCommand(commandName)) requireApproval();
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>BUG-001</id>
+      <severity>MEDIUM</severity>
+      <type>BUG</type>
+      <file>src/tools/executor.ts</file>
+      <location>runCommand() line 130</location>
+      <description>Command parsing uses command.trim().split(/\s+/), which breaks quoted arguments and escaped spaces (e.g., grep "foo bar" file). This causes incorrect execution and unpredictable behavior.</description>
+      <impact>Legitimate tool requests fail or execute with malformed argument boundaries, increasing operational failures in agent mode.</impact>
+      <recommended_fix>Use a robust shell-like parser for argv tokenization (e.g., string-argv) or accept structured command+args input directly from callers.</recommended_fix>
+      <code_before><![CDATA[
+const parts = command.trim().split(/\s+/);
+const cmd = parts[0];
+const args = parts.slice(1);
+]]></code_before>
+      <code_after><![CDATA[
+import { parseArgsStringToArgv } from 'string-argv';
+const [cmd, ...args] = parseArgsStringToArgv(command);
+if (!cmd) throw new Error('Empty command');
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>SEC-004</id>
+      <severity>MEDIUM</severity>
+      <type>SECURITY</type>
+      <file>src/providers/gemini.ts</file>
+      <location>generateResponse() line 19, generateStream() line 85</location>
+      <description>Gemini API key is embedded in URL query parameters rather than sent via header. Query strings can leak via logs, reverse proxies, browser history, and telemetry.</description>
+      <impact>Credential disclosure risk, especially in shared logging environments and debugging traces.</impact>
+      <recommended_fix>Send API key in x-goog-api-key header and keep URL key-free.</recommended_fix>
+      <code_before><![CDATA[
+const url = `${this.baseUrl}/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' } });
+]]></code_before>
+      <code_after><![CDATA[
+const url = `${this.baseUrl}/v1beta/models/${model}:generateContent`;
+await axios.post(url, payload, {
+  headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey }
+});
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>SEC-005</id>
+      <severity>MEDIUM</severity>
+      <type>SECURITY</type>
+      <file>src/utils/config.ts</file>
+      <location>deriveEncryptionKey() lines 21-35</location>
+      <description>Encryption key derivation is deterministic from low-entropy machine/user metadata (home path, platform, arch, hostname) and is not secret. Anyone with host-level context can derive the same key.</description>
+      <impact>Stored provider keys are weakly protected at rest; compromise of local user metadata can enable offline decryption.</impact>
+      <recommended_fix>Prefer OS keychain/credential vault (Keychain, Credential Manager, libsecret). If file encryption is required, use a random key stored in OS keychain or prompt-derived secret with PBKDF2/Argon2 + salt.</recommended_fix>
+      <code_before><![CDATA[
+const seed = [homedir(), process.platform, process.arch, os.hostname()].join('|');
+const hash = crypto.createHash('sha256').update(seed).digest();
+return hash.toString('base64');
+]]></code_before>
+      <code_after><![CDATA[
+const key = await keytar.getPassword('echo-cli', 'config-key') ?? randomBytes(32).toString('base64');
+await keytar.setPassword('echo-cli', 'config-key', key);
+return key;
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>ARCH-001</id>
+      <severity>MEDIUM</severity>
+      <type>ARCHITECTURE</type>
+      <file>src/index.ts</file>
+      <location>createCLI() repeated action handlers, e.g., lines 66-220 (and continued similarly throughout file)</location>
+      <description>Main CLI wiring is highly repetitive (nearly identical try/catch + process.exit blocks per command), creating a large monolith with high change friction and inconsistency risk.</description>
+      <impact>Increased maintenance cost and higher probability of inconsistent behavior/logging across commands; difficult to unit test command registration.</impact>
+      <recommended_fix>Extract a reusable asyncAction wrapper and command registry table, then compose commands declaratively.</recommended_fix>
+      <code_before><![CDATA[
+.command('status')
+.action(async () => {
+  try { await authCommand.status(); }
+  catch (error) { console.log(chalk.red('✗ Failed:'), ...); process.exit(1); }
+});
+]]></code_before>
+      <code_after><![CDATA[
+const guarded = (fn: (...a:any[]) => Promise<void>) => async (...a:any[]) => {
+  try { await fn(...a); } catch (e) { handleCliError(e); }
+};
+registerCommands(program, [
+  { path: ['auth','status'], action: guarded(authCommand.status) },
+]);
+]]></code_after>
+    </issue>
+
+    <issue>
+      <id>TEST-001</id>
+      <severity>HIGH</severity>
+      <type>BUG</type>
+      <file>package.json; coverage/coverage-final.json</file>
+      <location>test script; coverage data paths</location>
+      <description>Test execution currently fails (missing jest-cli module resolution), and committed coverage artifacts reference a different machine path (/home/lastborn/Echoctl) with many key files at 0% statement coverage.</description>
+      <impact>CI confidence is low: regressions in command layer, core engine, and provider orchestration are likely to ship undetected.</impact>
+      <recommended_fix>Repair test dependency lock consistency (reinstall clean node_modules/lockfile), run tests in CI on every PR, and regenerate coverage artifacts in-repo paths. Add targeted tests for security boundaries and command registration.</recommended_fix>
+      <code_before><![CDATA[
+"test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+# Runtime error: Cannot find module .../node_modules/jest-cli/build/index.js
+]]></code_before>
+      <code_after><![CDATA[
+"test": "jest --runInBand",
+"ci:test": "npm ci && npm test && npm run test:coverage"
+# Commit refreshed coverage generated in CI workspace only
+]]></code_after>
+    </issue>
+  </issues>
+
+  <execution_instructions>
+    <agent_task>
+      <task_id>T1</task_id>
+      <target_file>src/services/PluginManager.ts</target_file>
+      <action>MODIFY</action>
+      <details>Implement signed plugin verification + sandboxed plugin execution worker, and disable implicit autoload of untrusted plugin directories.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T2</task_id>
+      <target_file>src/tools/browser.ts</target_file>
+      <action>MODIFY</action>
+      <details>Add URL validation (protocol + host policy), block internal/private targets by default, and require explicit flag for internal navigation.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T3</task_id>
+      <target_file>src/tools/executor.ts</target_file>
+      <action>MODIFY</action>
+      <details>Replace token split parser with robust argv parsing and enforce command-specific argument schemas; split read-only vs mutating command classes.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T4</task_id>
+      <target_file>src/providers/gemini.ts</target_file>
+      <action>MODIFY</action>
+      <details>Move API key from URL query string into x-goog-api-key header for both streaming and non-streaming requests.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T5</task_id>
+      <target_file>src/utils/config.ts</target_file>
+      <action>MODIFY</action>
+      <details>Replace deterministic key derivation with OS keychain-backed secret material and rotation-safe fallback strategy.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T6</task_id>
+      <target_file>src/index.ts</target_file>
+      <action>MODIFY</action>
+      <details>Refactor repetitive command action error handling into reusable wrapper + command registry for maintainability/testability.</details>
+    </agent_task>
+    <agent_task>
+      <task_id>T7</task_id>
+      <target_file>package.json</target_file>
+      <action>MODIFY</action>
+      <details>Fix test script/dependency consistency; enforce deterministic CI test and coverage generation.</details>
+    </agent_task>
+  </execution_instructions>
+</fix_plan>

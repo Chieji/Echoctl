@@ -16,7 +16,7 @@ export class GeminiProvider extends BaseProvider {
 
   async generateResponse(messages: Message[], context?: string): Promise<ProviderResponse> {
     const model = this.model || this.defaultModel;
-    const url = `${this.baseUrl}/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+    const url = `${this.baseUrl}/v1beta/models/${model}:generateContent`;
 
     // Convert messages to Gemini format
     const systemInstruction = context 
@@ -58,6 +58,7 @@ export class GeminiProvider extends BaseProvider {
         {
           headers: {
             'Content-Type': 'application/json',
+            'x-goog-api-key': this.apiKey,
           },
           timeout: 60000,
         }
@@ -82,7 +83,7 @@ export class GeminiProvider extends BaseProvider {
 
   async generateStream(messages: Message[], context?: string, onChunk?: (chunk: string) => void): Promise<ProviderResponse> {
     const model = this.model || this.defaultModel;
-    const url = `${this.baseUrl}/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+    const url = `${this.baseUrl}/v1beta/models/${model}:streamGenerateContent?alt=sse`;
 
     const systemInstruction = context 
       ? { role: 'user', parts: [{ text: `System: ${context}` }] }
@@ -123,6 +124,7 @@ export class GeminiProvider extends BaseProvider {
         {
           headers: {
             'Content-Type': 'application/json',
+            'x-goog-api-key': this.apiKey,
           },
           responseType: 'stream',
           timeout: 60000,

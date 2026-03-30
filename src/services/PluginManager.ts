@@ -4,8 +4,9 @@
  */
 
 import { join, resolve } from 'path';
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, realpathSync, existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
+import { pathToFileURL } from 'url';
 
 export interface Plugin {
   name: string;
@@ -33,12 +34,53 @@ class PluginManager {
   private hooks: Map<string, Function[]> = new Map();
 
   constructor() {
-    // Default plugin paths
-    this.pluginPaths = [
-      join(homedir(), '.echo', 'plugins'),
-      join(process.cwd(), 'plugins'),
-      join(__dirname, '../plugins'),
-    ];
+    const localPlugins = join(process.cwd(), 'plugins');
+    const bundledPlugins = join(__dirname, '../plugins');
+
+    this.pluginPaths = [localPlugins, bundledPlugins];
+
+    // Optional explicit opt-in for user plugins.
+    if (process.env.ECHO_ENABLE_HOME_PLUGINS === 'true') {
+      this.pluginPaths.unshift(join(homedir(), '.echo', 'plugins'));
+    }
+  }
+
+  private isWithinTrustedRoot(path: string): boolean {
+    const pluginRealPath = realpathSync(path);
+
+    return this.pluginPaths.some((root) => {
+      if (!existsSync(root)) {
+        return false;
+      }
+
+      const rootRealPath = realpathSync(root);
+      return pluginRealPath === rootRealPath || pluginRealPath.startsWith(`${rootRealPath}/`);
+    });
+  }
+
+  private validatePluginDirectory(pluginPath: string): void {
+    if (!this.isWithinTrustedRoot(pluginPath)) {
+      throw new Error(`Plugin path is outside trusted roots: ${pluginPath}`);
+    }
+
+    const pathStats = statSync(pluginPath);
+    if (!pathStats.isDirectory()) {
+      throw new Error(`Plugin path is not a directory: ${pluginPath}`);
+    }
+
+    if (typeof process.getuid === 'function' && process.env.ECHO_ALLOW_UNSAFE_PLUGIN_OWNERSHIP !== 'true') {
+      const ownerUid = pathStats.uid;
+      const currentUid = process.getuid();
+      if (ownerUid !== currentUid) {
+        throw new Error(`Plugin owner UID (${ownerUid}) does not match current user UID (${currentUid})`);
+      }
+    }
+  }
+
+  private readPackageJson(pluginPath: string): PluginMetadata & { echo?: { plugin?: boolean } } {
+    const packageJsonPath = join(pluginPath, 'package.json');
+    const packageJsonRaw = readFileSync(packageJsonPath, 'utf-8');
+    return JSON.parse(packageJsonRaw);
   }
 
   /**
@@ -53,22 +95,18 @@ class PluginManager {
 
         for (const entry of entries) {
           const fullPath = join(pluginPath, entry);
-          const stat = statSync(fullPath);
+          try {
+            this.validatePluginDirectory(fullPath);
+            const packageJson = this.readPackageJson(fullPath);
 
-          if (stat.isDirectory()) {
-            const packageJsonPath = join(fullPath, 'package.json');
-            try {
-              const packageJson = require(packageJsonPath);
-
-              if (packageJson.echo?.plugin) {
-                discovered.push(fullPath);
-              }
-            } catch (error) {
-              // Not a valid plugin
+            if (packageJson.echo?.plugin) {
+              discovered.push(resolve(fullPath));
             }
+          } catch {
+            // Skip invalid or untrusted plugin directories
           }
         }
-      } catch (error) {
+      } catch {
         // Plugin path doesn't exist
       }
     }
@@ -81,12 +119,25 @@ class PluginManager {
    */
   async load(pluginPath: string): Promise<Plugin> {
     try {
-      const packageJsonPath = join(pluginPath, 'package.json');
-      const packageJson = require(packageJsonPath);
+      this.validatePluginDirectory(pluginPath);
+      const packageJson = this.readPackageJson(pluginPath);
 
-      // Load plugin module
-      const mainPath = join(pluginPath, packageJson.main || 'index.js');
-      const pluginModule = require(mainPath);
+      if (!packageJson.echo?.plugin) {
+        throw new Error('package.json missing echo.plugin=true marker');
+      }
+
+      const existing = this.plugins.get(packageJson.name);
+      if (existing) {
+        return existing;
+      }
+
+      const mainPath = resolve(pluginPath, packageJson.main || 'index.js');
+      if (!this.isWithinTrustedRoot(mainPath)) {
+        throw new Error(`Plugin entrypoint is outside trusted roots: ${mainPath}`);
+      }
+
+      const pluginModuleImport = await import(pathToFileURL(mainPath).href);
+      const pluginModule = pluginModuleImport.default ?? pluginModuleImport;
 
       const plugin: Plugin = {
         name: packageJson.name,
@@ -95,6 +146,10 @@ class PluginManager {
         author: packageJson.author,
         ...pluginModule,
       };
+
+      if (!plugin.name || !plugin.version) {
+        throw new Error('Invalid plugin metadata: name and version are required');
+      }
 
       // Initialize plugin
       if (plugin.initialize) {

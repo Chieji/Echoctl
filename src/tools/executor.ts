@@ -1,11 +1,8 @@
 /**
  * Tool Execution Engine
  * Handles shell commands, file I/O, and code execution
- * 
- * SECURITY FIX 1.3: Replaced exec() with execFile() + allowlist
- * - No shell interpretation
- * - Explicit argument validation
- * - Bypassable blocklist replaced with strict allowlist
+ *
+ * SECURITY: Uses execFile() with explicit policies.
  */
 
 import { execFile } from 'child_process';
@@ -24,115 +21,163 @@ export interface ToolResult {
   executionTime?: number;
 }
 
-/**
- * SECURITY FIX 1.3: Allowlist-based command validation
- * Only explicitly permitted commands and arguments are allowed
- */
-const ALLOWLISTED_COMMANDS = {
-  'git': ['status', 'log', 'diff', 'clone', 'pull', 'push', 'commit', 'branch', 'checkout', 'add', 'init', 'remote', 'fetch', 'merge', 'rebase'],
-  'npm': ['install', 'run', 'test', 'build', 'start', 'list', 'info', 'outdated', 'audit', 'ci'],
-  'node': ['--version', '--help'],
-  'python3': ['--version', '--help'],
-  'ls': ['-la', '-l', '-a', '-h', '-R'],
-  'cat': [],
-  'grep': ['-r', '-i', '-n', '-l', '-c', '-v', '-E'],
-  'find': ['.', '-name', '-type', '-path', '-exec', '-delete'],
-  'mkdir': ['-p', '-m'],
-  'touch': [],
-  'cp': ['-r', '-f', '-v'],
-  'mv': ['-f', '-v'],
-  'pwd': [],
-  'whoami': [],
-  'date': [],
-  'echo': [],
-  'wc': ['-l', '-w', '-c'],
-  'head': ['-n'],
-  'tail': ['-n', '-f'],
-  'sort': ['-r', '-n', '-u'],
-  'uniq': ['-c', '-d', '-u'],
-  'cut': ['-d', '-f'],
-  'sed': ['-e', '-i', '-n'],
-  'awk': ['-F', '-v'],
-  'tr': ['-d', '-s', '-c'],
-  'file': [],
-  'stat': [],
-  'chmod': ['-R'],
-  'chown': ['-R'],
-  'du': ['-h', '-s', '-a'],
-  'df': ['-h'],
-  'ps': ['aux', '-ef'],
-  'top': ['-b', '-n'],
-  'kill': ['-9', '-15'],
-  'which': [],
-  'whereis': [],
-  'type': [],
-  'command': [],
+const READ_ONLY_COMMANDS = new Set([
+  'git', 'npm', 'node', 'python3', 'ls', 'cat', 'grep', 'find', 'pwd', 'whoami', 'date',
+  'echo', 'wc', 'head', 'tail', 'sort', 'uniq', 'cut', 'sed', 'awk', 'tr', 'file', 'stat',
+  'du', 'df', 'ps', 'top', 'which', 'whereis', 'type', 'command',
+]);
+
+const MUTATING_COMMANDS = new Set([
+  'mkdir', 'touch', 'cp', 'mv',
+]);
+
+const ALLOWED_COMMANDS = new Set([...READ_ONLY_COMMANDS, ...MUTATING_COMMANDS]);
+
+const ALLOWED_FLAGS: Record<string, Set<string>> = {
+  git: new Set(['status', 'log', 'diff', 'clone', 'pull', 'branch', 'checkout', 'add', 'init', 'remote', 'fetch', 'merge', 'rebase', 'show']),
+  npm: new Set(['install', 'run', 'test', 'build', 'start', 'list', 'info', 'outdated', 'audit', 'ci']),
+  node: new Set(['--version', '--help']),
+  python3: new Set(['--version', '--help']),
+  ls: new Set(['-la', '-l', '-a', '-h', '-R']),
+  grep: new Set(['-r', '-i', '-n', '-l', '-c', '-v', '-E']),
+  find: new Set(['.', '-name', '-type', '-path']),
+  mkdir: new Set(['-p', '-m']),
+  cp: new Set(['-r', '-f', '-v']),
+  mv: new Set(['-f', '-v']),
+  wc: new Set(['-l', '-w', '-c']),
+  head: new Set(['-n']),
+  tail: new Set(['-n']),
+  sort: new Set(['-r', '-n', '-u']),
+  uniq: new Set(['-c', '-d', '-u']),
+  cut: new Set(['-d', '-f']),
+  sed: new Set(['-e', '-n']),
+  awk: new Set(['-F', '-v']),
+  tr: new Set(['-d', '-s', '-c']),
+  du: new Set(['-h', '-s', '-a']),
+  df: new Set(['-h']),
+  ps: new Set(['aux', '-ef']),
+  top: new Set(['-b', '-n']),
 };
 
-/**
- * Resolve command path from allowed locations
- */
+const FORBIDDEN_TOKENS = new Set(['-exec', '-delete', '--delete', '--preserve-root', 'sudo']);
+
+function parseCommand(input: string): string[] {
+  const args: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let escaping = false;
+
+  for (const char of input.trim()) {
+    if (escaping) {
+      current += char;
+      escaping = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaping = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current.length > 0) {
+        args.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (escaping || quote) {
+    throw new Error('Invalid command: unterminated escape or quote');
+  }
+
+  if (current.length > 0) {
+    args.push(current);
+  }
+
+  return args;
+}
+
 function resolveCommand(cmd: string): string {
   const allowedPaths = ['/usr/bin', '/bin', '/usr/local/bin', '/usr/sbin', '/sbin'];
-  
+
   for (const dir of allowedPaths) {
     const fullPath = join(dir, cmd);
     if (existsSync(fullPath)) {
       return fullPath;
     }
   }
-  
+
   throw new Error(`Command not found in allowed paths: ${cmd}`);
 }
 
-/**
- * Validate that an argument is in the allowed list for the command
- */
 function validateArgument(command: string, arg: string): boolean {
-  const allowedArgs = ALLOWLISTED_COMMANDS[command as keyof typeof ALLOWLISTED_COMMANDS];
-  
-  if (!allowedArgs) {
+  if (FORBIDDEN_TOKENS.has(arg)) {
     return false;
   }
-  
-  // If command has no restrictions (empty array), allow any argument
-  if (allowedArgs.length === 0) {
-    return true;
+
+  const allowedFlags = ALLOWED_FLAGS[command];
+  if (!allowedFlags || allowedFlags.size === 0) {
+    return !arg.startsWith('-') || arg === '-';
   }
-  
-  // Check if argument is in the allowed list
-  if ((allowedArgs as string[]).includes(arg)) {
-    return true;
-  }
-  
-  // Allow file paths (don't start with -)
+
   if (!arg.startsWith('-')) {
     return true;
   }
-  
-  return false;
+
+  return allowedFlags.has(arg);
 }
 
-/**
- * Execute a shell command safely using execFile (no shell interpretation)
- * SECURITY: Uses allowlist + execFile to prevent command injection
- */
+function validateTokenSafety(token: string): string | null {
+  if (token.includes('..') || token.includes('~')) {
+    return `Security: Path traversal detected in argument: ${token}`;
+  }
+
+  if (token.includes('\0')) {
+    return `Security: Null byte detected in argument: ${token}`;
+  }
+
+  return null;
+}
+
 export async function runCommand(
   command: string,
-  options: { timeout?: number; cwd?: string } = {}
+  options: { timeout?: number; cwd?: string; allowMutations?: boolean } = {}
 ): Promise<ToolResult> {
   const startTime = Date.now();
-  const timeout = options.timeout || 30000; // 30s default
+  const timeout = options.timeout || 30000;
   const cwd = options.cwd || process.cwd();
 
   try {
-    // Parse command and arguments
-    const parts = command.trim().split(/\s+/);
-    const cmd = parts[0];
-    const args = parts.slice(1);
+    const parts = parseCommand(command);
+    const [cmd, ...args] = parts;
 
-    // 1. Validate command is in allowlist
-    if (!(cmd in ALLOWLISTED_COMMANDS)) {
+    if (!cmd) {
+      return {
+        success: false,
+        output: '',
+        error: 'Security: Empty command',
+      };
+    }
+
+    if (!ALLOWED_COMMANDS.has(cmd)) {
       return {
         success: false,
         output: '',
@@ -140,8 +185,24 @@ export async function runCommand(
       };
     }
 
-    // 2. Validate each argument
+    if (MUTATING_COMMANDS.has(cmd) && !options.allowMutations) {
+      return {
+        success: false,
+        output: '',
+        error: `Security: Mutating command requires explicit approval: ${cmd}`,
+      };
+    }
+
     for (const arg of args) {
+      const tokenError = validateTokenSafety(arg);
+      if (tokenError) {
+        return {
+          success: false,
+          output: '',
+          error: tokenError,
+        };
+      }
+
       if (!validateArgument(cmd, arg)) {
         return {
           success: false,
@@ -149,39 +210,26 @@ export async function runCommand(
           error: `Security: Argument not allowed for ${cmd}: ${arg}`,
         };
       }
-
-      // Prevent path traversal in arguments
-      if (arg.includes('..') || arg.includes('~')) {
-        return {
-          success: false,
-          output: '',
-          error: `Security: Path traversal detected in argument: ${arg}`,
-        };
-      }
     }
 
-    // 3. Validate working directory (prevent path traversal)
-    if (cwd) {
-      const resolvedCwd = resolve(cwd);
-      const homeDir = os.homedir();
-      const allowedBase = resolve(homeDir);
-      
-      if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
-        return {
-          success: false,
-          output: '',
-          error: `Security: Working directory outside allowed base: ${resolvedCwd}`,
-        };
-      }
+    const resolvedCwd = resolve(cwd);
+    const homeDir = os.homedir();
+    const allowedBase = resolve(homeDir);
+
+    if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
+      return {
+        success: false,
+        output: '',
+        error: `Security: Working directory outside allowed base: ${resolvedCwd}`,
+      };
     }
 
-    // 4. Execute with execFile (no shell interpretation)
     const cmdPath = resolveCommand(cmd);
-    
+
     const { stdout, stderr } = await execFileAsync(cmdPath, args, {
       cwd,
       timeout,
-      maxBuffer: 1024 * 1024 * 10, // 10MB
+      maxBuffer: 1024 * 1024 * 10,
       killSignal: 'SIGTERM',
     });
 
@@ -253,7 +301,7 @@ export async function listFilesTool(dirPath: string = '.'): Promise<ToolResult> 
   try {
     const absolutePath = resolve(dirPath);
     const files = await readdir(absolutePath);
-    
+
     const details = await Promise.all(
       files.map(async (file) => {
         const filePath = join(absolutePath, file);
@@ -306,16 +354,16 @@ export async function deleteFileTool(
 export async function executePython(code: string): Promise<ToolResult> {
   // Write code to OS temp directory (not project cwd) for safety
   const tempFile = join(os.tmpdir(), `echo_temp_${Date.now()}_${Math.random().toString(36).slice(2)}.py`);
-  
+
   try {
     await writeFile(tempFile, code);
     const result = await runCommand(`python3 "${tempFile}"`);
-    
+
     // Cleanup
     try {
       await rm(tempFile);
     } catch {}
-    
+
     return result;
   } catch (error: any) {
     // Ensure cleanup even on error
@@ -334,16 +382,16 @@ export async function executePython(code: string): Promise<ToolResult> {
 export async function executeNode(code: string): Promise<ToolResult> {
   // Write code to OS temp directory (not project cwd) for safety
   const tempFile = join(os.tmpdir(), `echo_temp_${Date.now()}_${Math.random().toString(36).slice(2)}.js`);
-  
+
   try {
     await writeFile(tempFile, code);
     const result = await runCommand(`node "${tempFile}"`);
-    
+
     // Cleanup
     try {
       await rm(tempFile);
     } catch {}
-    
+
     return result;
   } catch (error: any) {
     // Ensure cleanup even on error
@@ -461,12 +509,12 @@ export const browserTools = {
 
 export { voiceTools, imageTools };
 
-export type ToolName = 
-  | keyof typeof tools 
-  | keyof typeof webTools 
-  | keyof typeof gitTools 
-  | keyof typeof multiFileTools 
-  | keyof typeof lspTools 
+export type ToolName =
+  | keyof typeof tools
+  | keyof typeof webTools
+  | keyof typeof gitTools
+  | keyof typeof multiFileTools
+  | keyof typeof lspTools
   | keyof typeof browserTools
   | keyof typeof githubTools
   | keyof typeof voiceTools

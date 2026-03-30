@@ -10,7 +10,7 @@ import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader
 import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
-import { getMCPManager } from '../extensions/mcp.js';
+import { buildExtensionSnapshot } from '../extensions/registry.js';
 import { BDIEngine } from './bdi-engine.js';
 
 // Initial static tool registry
@@ -249,34 +249,35 @@ export class ReActEngine {
   async run(task: string): Promise<{ success: boolean; result: string; actions: string[] }> {
     const spinner = ora({ text: 'Starting engine...', spinner: 'dots' }).start();
     
-    // 1. Initialize tool registry with MCP tools
+    // 1. Initialize tool registry with extension tools (MCP + plugins)
     const dynamicToolDescriptions: Record<string, string> = {};
     try {
-      spinner.text = 'Initializing MCP tools...';
-      const mcpManager = await getMCPManager();
-      const mcpTools = await mcpManager.getAllTools();
-      
-      const dynamicMcpTools: any = {};
-      for (const [key, { tool }] of Object.entries(mcpTools)) {
-        dynamicMcpTools[key] = async (args: any) => {
-          const mcp = await getMCPManager();
-          const allTools = await mcp.getAllTools();
-          const target = allTools[key];
-          if (!target) throw new Error(`MCP Tool ${key} no longer available`);
-          return await target.client.callTool(tool.name, args);
-        };
-        
-        // Provide rich description for the prompt
-        const schema = JSON.stringify(tool.inputSchema);
-        dynamicToolDescriptions[key] = `${tool.description || 'Remote tool'} (Schema: ${schema})`;
+      spinner.text = 'Initializing extension tools...';
+      const snapshot = await buildExtensionSnapshot();
+      const dynamicTools: Record<string, any> = {};
+
+      for (const descriptor of Object.values(snapshot.tools)) {
+        if (Object.prototype.hasOwnProperty.call(staticToolRegistry, descriptor.name)) {
+          snapshot.warnings.push(
+            `Extension tool '${descriptor.name}' collides with built-in tool name. Built-in tool kept.`
+          );
+          continue;
+        }
+
+        dynamicTools[descriptor.name] = async (args: any) => descriptor.invoke(args);
+        dynamicToolDescriptions[descriptor.name] = descriptor.description;
       }
 
       this.toolRegistry = {
         ...staticToolRegistry,
-        ...dynamicMcpTools
+        ...dynamicTools,
       };
-    } catch (err) {
-      spinner.warn('MCP initialization failed. Proceeding with static tools only.');
+
+      for (const warning of snapshot.warnings) {
+        console.warn(chalk.yellow(`⚠ ${warning}`));
+      }
+    } catch {
+      spinner.warn('Extension initialization failed. Proceeding with static tools only.');
     }
 
     spinner.text = 'Thinking...';

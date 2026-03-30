@@ -4,6 +4,7 @@
  */
 
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import net from 'net';
 
 export interface BrowserResult {
   success: boolean;
@@ -17,6 +18,43 @@ export interface BrowserResult {
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
 let page: Page | null = null;
+
+
+function ipToLong(ip: string): number {
+  return ip.split('.').reduce((acc, octet) => (acc << 8) + Number(octet), 0) >>> 0;
+}
+
+function isPrivateIPv4(ip: string): boolean {
+  const n = ipToLong(ip);
+  const ranges: Array<[number, number]> = [
+    [ipToLong('10.0.0.0'), ipToLong('10.255.255.255')],
+    [ipToLong('172.16.0.0'), ipToLong('172.31.255.255')],
+    [ipToLong('192.168.0.0'), ipToLong('192.168.255.255')],
+    [ipToLong('127.0.0.0'), ipToLong('127.255.255.255')],
+    [ipToLong('169.254.0.0'), ipToLong('169.254.255.255')],
+  ];
+  return ranges.some(([start, end]) => n >= start && n <= end);
+}
+
+function isInternalHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+
+  if (host === 'localhost' || host.endsWith('.local')) {
+    return true;
+  }
+
+  const ipType = net.isIP(host);
+  if (ipType === 4) {
+    return isPrivateIPv4(host);
+  }
+
+  if (ipType === 6) {
+    return host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80');
+  }
+
+  return false;
+}
+
 
 /**
  * Get or create browser instance
@@ -46,13 +84,22 @@ async function getBrowser(): Promise<{ browser: Browser; context: BrowserContext
 /**
  * Navigate to a URL
  */
-export async function browserNavigate(url: string): Promise<BrowserResult> {
+export async function browserNavigate(url: string, options: { allowInternal?: boolean } = {}): Promise<BrowserResult> {
   try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error(`Protocol not allowed: ${parsed.protocol}`);
+    }
+
+    if (isInternalHost(parsed.hostname) && !options.allowInternal) {
+      throw new Error(`Internal host blocked by policy: ${parsed.hostname}`);
+    }
+
     const { page } = await getBrowser();
-    
-    await page.goto(url, { 
-      waitUntil: 'networkidle',
-      timeout: 30000 
+
+    await page.goto(parsed.toString(), {
+      waitUntil: 'domcontentloaded',
+      timeout: 15000
     });
 
     const title = await page.title();
@@ -87,7 +134,7 @@ export async function browserScreenshot(savePath?: string): Promise<BrowserResul
     let savedPath: string | undefined;
     if (savePath) {
       const { writeFile } = await import('fs/promises');
-      await writeFile(savePath, screenshot as any);
+      await writeFile(savePath, new Uint8Array(screenshot));
       savedPath = savePath;
     }
 

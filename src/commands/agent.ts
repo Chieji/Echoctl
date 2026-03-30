@@ -12,6 +12,7 @@ import { BDIEngine } from '../core/bdi.js';
 import Enquirer from 'enquirer';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { buildExtensionSnapshot } from '../extensions/registry.js';
 
 /**
  * Run agent mode with a task
@@ -126,11 +127,11 @@ export async function agentTools(): Promise<void> {
   console.log(chalk.bold('\n🔧 Available Agent Tools\n'));
   
   const tools = [
-    { category: 'Shell', tools: ['run_command'] },
+    { category: 'Shell', tools: ['runCommand'] },
     { category: 'Files', tools: ['readFile', 'writeFile', 'listFiles', 'deleteFile'] },
     { category: 'Code', tools: ['executePython', 'executeNode'] },
     { category: 'Web', tools: ['searchWeb', 'scrapeUrl', 'getNews'] },
-    { category: 'Browser', tools: ['browserNavigate', 'browserScreenshot', 'browserClick', 'browserType', 'browserExtract', 'browserGetLinks'] },
+    { category: 'Browser', tools: ['navigate', 'screenshot', 'click', 'type', 'extract', 'getLinks', 'searchGoogle'] },
     { category: 'Git', tools: ['getGitStatus', 'gitAdd', 'gitAddAll', 'gitCommit', 'gitPush', 'gitLog'] },
     { category: 'Multi-File', tools: ['findAndReplace', 'searchInFiles', 'createFiles', 'updateFiles', 'deleteFiles', 'findFiles', 'getFileTree'] },
     { category: 'LSP', tools: ['findSymbolReferences', 'renameSymbol', 'findSymbolDefinition', 'detectProjectLanguage'] },
@@ -144,24 +145,45 @@ export async function agentTools(): Promise<void> {
     console.log('');
   }
 
-  // MCP Tools
   try {
-    const { getMCPManager } = await import('../extensions/mcp.js');
-    const mcpManager = await getMCPManager();
-    const mcpTools = await mcpManager.getAllTools();
-    
-    if (Object.keys(mcpTools).length > 0) {
-      console.log(chalk.bold('MCP (Remote):'));
-      for (const toolKey of Object.keys(mcpTools)) {
-        console.log(`  • ${toolKey}`);
+    const snapshot = await buildExtensionSnapshot();
+    const bySource: Record<'mcp' | 'plugin', string[]> = {
+      mcp: [],
+      plugin: [],
+    };
+
+    for (const descriptor of Object.values(snapshot.tools)) {
+      bySource[descriptor.source].push(descriptor.name);
+    }
+
+    if (bySource.mcp.length > 0 || bySource.plugin.length > 0) {
+      console.log(chalk.bold('Extensions:'));
+
+      if (bySource.mcp.length > 0) {
+        console.log(chalk.bold('  MCP:'));
+        for (const name of bySource.mcp.sort()) {
+          console.log(`    • ${name}`);
+        }
       }
+
+      if (bySource.plugin.length > 0) {
+        console.log(chalk.bold('  Plugins:'));
+        for (const name of bySource.plugin.sort()) {
+          console.log(`    • ${name}`);
+        }
+      }
+
       console.log('');
     }
-  } catch (error) {
-    // Ignore MCP errors in tools listing
+
+    for (const warning of snapshot.warnings) {
+      console.log(chalk.yellow(`⚠ ${warning}`));
+    }
+  } catch {
+    // Ignore extension errors in tools listing
   }
   
-  console.log(chalk.dim('Total: 30+ tools available to agent\n'));
+  console.log(chalk.dim('Total: built-ins + dynamic extension tools available to agent\n'));
 }
 
 /**
