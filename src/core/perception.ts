@@ -1,5 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
-import { LongTermMemory } from '../memory/vector-memory.js';
+import { getLongTermMemory } from '../memory/vector-memory.js';
 import { loadEchoContext } from '../tools/context-loader.js';
 import { getGitStatus } from '../tools/git.js';
 import { Beliefs } from './bdi-types.js';
@@ -10,7 +10,7 @@ import { Beliefs } from './bdi-types.js';
  */
 export class Perceptor {
   private brainStore = getBrainStore();
-  private semanticMemory = new LongTermMemory();
+  private semanticMemory = getLongTermMemory();
 
   /**
    * Update beliefs based on the current task and environment
