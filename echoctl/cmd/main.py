@@ -94,13 +94,13 @@ def config_set(
 ):
     """Set a configuration value"""
     config = get_config()
-    
+
     try:
         config.set_value(key, value)
         console.print(f"[green]✓[/green] Set [bold]{key}[/bold] = [green]{value}[/green]")
     except ValueError as e:
         console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 @config_app.command("export")
@@ -129,16 +129,14 @@ def config_import(
 ):
     """Import configuration from JSON"""
     config = get_config()
-    
+
     try:
-        with open(input_file) as f:
-            config_json = f.read()
-        
+        config_json = Path(input_file).read_text()
         config.import_config(config_json)
         console.print(f"[green]✓[/green] Configuration imported from [bold]{input_file}[/bold]")
     except Exception as e:
         console.print(f"[red]Error importing configuration:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 # ============================================================================
@@ -357,7 +355,7 @@ def brain_search(
         console.print(
             Panel(
                 f"[bold]Key:[/bold] {key}\n"
-                f"[bold]Tags:[/bold] {tags_str if tags_str else 'none'}\n\n"
+                f"[bold]Tags:[/bold] {tags_str or 'none'}\n\n"
                 f"{value[:500]}{'...' if len(value) > 500 else ''}",
                 title=f"🧠 {key}",
                 border_style="blue",
@@ -557,19 +555,17 @@ def approve(
     if not yes and not no:
         console.print("[red]✗[/red] Must specify --yes or --no")
         raise typer.Exit(1)
-    
+
     approved = yes
-    
+
     config = get_config()
     client = SyncEchoMenClient(base_url=config.backend_url, api_key=config.api_key)
-    
-    success = client.submit_approval(approval_id, approved)
-    
-    if success:
+
+    if success := client.submit_approval(approval_id, approved):
         action = "Approved" if approved else "Denied"
         console.print(f"[green]✓[/green] {action} request {approval_id}")
     else:
-        console.print(f"[red]✗[/red] Failed to submit approval")
+        console.print("[red]✗[/red] Failed to submit approval")
         raise typer.Exit(1)
 
 
@@ -583,19 +579,18 @@ def approve_config(
 ):
     """Configure auto-approval rules"""
     config = get_config()
-    
+
     if auto_approve:
         tools = [t.strip() for t in auto_approve.split(",")]
         config.auto_approve_tools = tools
         config.save()
         console.print(f"[green]✓[/green] Auto-approve tools: {', '.join(tools)}")
+    elif config.auto_approve_tools:
+        console.print("[bold]Current auto-approve tools:[/bold]")
+        for tool in config.auto_approve_tools:
+            console.print(f"  • {tool}")
     else:
-        if config.auto_approve_tools:
-            console.print(f"[bold]Current auto-approve tools:[/bold]")
-            for tool in config.auto_approve_tools:
-                console.print(f"  • {tool}")
-        else:
-            console.print("[dim]No auto-approve tools configured[/dim]")
+        console.print("[dim]No auto-approve tools configured[/dim]")
 
 
 # ============================================================================
@@ -650,20 +645,19 @@ def web_screenshot(
     """Take a screenshot of current page"""
     config = get_config()
     client = SyncEchoMenClient(base_url=config.backend_url, api_key=config.api_key)
-    
+
     console.print("[dim]Taking screenshot...[/dim]")
-    
+
     result = client.take_screenshot()
-    
+
     if "error" in result:
         console.print(f"[red]✗ Error:[/red] {result['error']}")
         raise typer.Exit(1)
-    
+
     # Decode and save screenshot
     import base64
-    
-    screenshot_data = result.get("screenshot", "")
-    if screenshot_data:
+
+    if screenshot_data := result.get("screenshot", ""):
         with open(output, "wb") as f:
             f.write(base64.b64decode(screenshot_data))
         console.print(f"[green]✓[/green] Screenshot saved to [bold]{output}[/bold]")
@@ -696,7 +690,7 @@ def track_new(
     name: str = typer.Argument(..., help="Track name"),
 ):
     """Create a new development track"""
-    console.print(f"[yellow]⚠ Track management coming soon[/yellow]")
+    console.print("[yellow]⚠ Track management coming soon[/yellow]")
     console.print(f"[dim]Would create track: {name}[/dim]")
 
 
@@ -711,7 +705,7 @@ def track_switch(
     track_id: str = typer.Argument(..., help="Track ID to switch to"),
 ):
     """Switch to a different track"""
-    console.print(f"[yellow]⚠ Track management coming soon[/yellow]")
+    console.print("[yellow]⚠ Track management coming soon[/yellow]")
 
 
 @track_app.command("status")
@@ -730,7 +724,7 @@ def track_export(
     ),
 ):
     """Export track artifacts"""
-    console.print(f"[yellow]⚠ Track management coming soon[/yellow]")
+    console.print("[yellow]⚠ Track management coming soon[/yellow]")
 
 
 # ============================================================================
@@ -752,7 +746,7 @@ def artifact_show(
     artifact_id: str = typer.Argument(..., help="Artifact ID"),
 ):
     """Show an artifact"""
-    console.print(f"[yellow]⚠ Artifact management coming soon[/yellow]")
+    console.print("[yellow]⚠ Artifact management coming soon[/yellow]")
 
 
 @artifact_app.command("export")
@@ -761,7 +755,7 @@ def artifact_export(
     output: str = typer.Option(None, "--output", "-o", help="Output file path"),
 ):
     """Export an artifact"""
-    console.print(f"[yellow]⚠ Artifact management coming soon[/yellow]")
+    console.print("[yellow]⚠ Artifact management coming soon[/yellow]")
 
 
 # ============================================================================

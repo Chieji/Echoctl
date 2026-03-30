@@ -138,21 +138,21 @@ class Config(BaseSettings):
             "use-colors": "use_colors",
             "use_colors": "use_colors",
         }
-        
+
         field_name = key_map.get(key, key)
-        
+
         if field_name not in self.model_fields:
             raise ValueError(f"Unknown configuration key: {key}")
-        
+
         # Type conversion
         field_type = self.model_fields[field_name].annotation
         if field_type == bool:
-            value = value.lower() in ("true", "1", "yes", "on")
+            value = value.lower() in {"true", "1", "yes", "on"}
         elif field_type == int:
             value = int(value)
         elif field_type == float:
             value = float(value)
-        
+
         setattr(self, field_name, value)
         self.save()
     
