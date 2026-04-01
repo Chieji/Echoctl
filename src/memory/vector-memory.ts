@@ -25,7 +25,9 @@ export class LongTermMemory {
   private readonly storagePath: string;
   // In-memory cache to skip redundant Gemini API calls (Performance: Bolt ⚡)
   // This reduces latency for repeated queries in the same session.
+  // FIFO eviction with 1000 entry limit (Performance: Bolt ⚡)
   private embeddingCache: Map<string, number[]> = new Map();
+  private readonly CACHE_LIMIT = 1000;
 
   constructor() {
     this.storagePath = join(homedir(), '.config', 'echo-cli-nodejs', 'semantic-memory.json');
@@ -88,6 +90,14 @@ export class LongTermMemory {
     // Return cached result if available to reduce network latency (Performance: Bolt ⚡)
     if (this.embeddingCache.has(text)) {
       return this.embeddingCache.get(text)!;
+    }
+
+    // Maintain FIFO cache limit (Performance: Bolt ⚡)
+    if (this.embeddingCache.size >= this.CACHE_LIMIT) {
+      const firstKey = this.embeddingCache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.embeddingCache.delete(firstKey);
+      }
     }
 
     const config = getConfig();
@@ -154,4 +164,17 @@ export class LongTermMemory {
       console.error(chalk.red(`[Memory] Save failed: ${err.message}`));
     }
   }
+}
+
+/**
+ * Singleton access to long-term memory (Performance: Bolt ⚡)
+ * Ensures only one instance is created, reducing redundant disk I/O and unifying cache.
+ */
+let longTermMemoryInstance: LongTermMemory | null = null;
+
+export function getLongTermMemory(): LongTermMemory {
+  if (!longTermMemoryInstance) {
+    longTermMemoryInstance = new LongTermMemory();
+  }
+  return longTermMemoryInstance;
 }

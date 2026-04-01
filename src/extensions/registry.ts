@@ -288,3 +288,33 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension Snapshot - used for agent tool discovery
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, Extension>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of currently enabled extensions
+ * Used by agent engine to discover and load dynamic tools
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const registry = getExtensionRegistry();
+  const enabled = registry.listEnabled();
+
+  const tools: Record<string, Extension> = {};
+  for (const ext of enabled) {
+    // Only include extensions that are actually tools (mcp or plugin)
+    if (ext.source === 'mcp' || ext.source === 'plugin') {
+      tools[ext.id] = ext;
+    }
+  }
+
+  return {
+    tools,
+    warnings: []
+  };
+}
