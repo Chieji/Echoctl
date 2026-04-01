@@ -47,13 +47,13 @@ const TASK_KEYWORDS: Record<TaskType, string[]> = {
     'branch',
     'merge',
     'pull request',
+    'script',
   ],
   creative: [
     'write',
     'story',
     'poem',
     'song',
-    'script',
     'blog',
     'article',
     'essay',
@@ -139,9 +139,10 @@ export function classifyTask(input: string): TaskType {
   let classified: TaskType = 'general';
 
   for (const [taskType, score] of Object.entries(scores)) {
-    // Weight code tasks higher if equal
-    const currentWeight = taskType === 'code' ? score * 1.5 : score;
-    const maxWeight = classified === 'code' ? maxScore * 1.5 : maxScore;
+    // Weight code tasks higher if equal (Performance: Bolt ⚡)
+    // Increased weight to 2.5 ensures code tasks correctly trigger Groq over slower providers.
+    const currentWeight = taskType === 'code' ? score * 2.5 : score;
+    const maxWeight = classified === 'code' ? maxScore * 2.5 : maxScore;
 
     if (currentWeight > maxWeight) {
       maxScore = score;
