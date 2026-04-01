@@ -1,5 +1,5 @@
 import { getBrainStore } from '../storage/brain.js';
-import { LongTermMemory } from '../memory/vector-memory.js';
+import { getLongTermMemory } from '../memory/vector-memory.js';
 
 /**
  * Reflector - Handles the 'Reflection' phase.
@@ -7,7 +7,7 @@ import { LongTermMemory } from '../memory/vector-memory.js';
  */
 export class Reflector {
   private brainStore = getBrainStore();
-  private semanticMemory = new LongTermMemory();
+  private semanticMemory = getLongTermMemory();
 
   /**
    * Reflect on the task result and store learned knowledge
