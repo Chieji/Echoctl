@@ -81,9 +81,11 @@ describe('Tool Executor - Security', () => {
 
     it('should block dangerous command chains', async () => {
       const result = await runCommand('echo hello && rm -rf /tmp');
-      // This should be allowed as it's not deleting root
-      // But chains with rm -rf should be detected
-      expect(result.success).toBe(true); // Actually allowed since not targeting /
+      // In current implementation, && is not parsed correctly as it's not a single command
+      // and it fails because '&&' is not an allowed command/flag.
+      // So success is false, which is correct for security.
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
 
     it('should allow safe commands', async () => {
