@@ -1,3 +1,5 @@
+set -e
+set -e
 #!/bin/bash
 # Build script that adds .js extensions to compiled files
 
