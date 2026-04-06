@@ -1,0 +1,329 @@
+# Instincts generated from https://github.com/Chieji/Echoctl
+# Generated: 2026-04-06T08:46:25.842Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: Echoctl-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Commit Length
+
+## Action
+
+Write moderate-length commit messages (~64 characters)
+
+## Evidence
+
+- Average commit message length: 64 chars
+- Based on 2 commits
+
+---
+id: Echoctl-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: Echoctl-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: Echoctl-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: Echoctl-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: Echoctl-workflow-parallelize-multi-file-operations
+trigger: "when doing parallelize multi file operations"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Workflow Parallelize Multi File Operations
+
+## Action
+
+Follow the parallelize-multi-file-operations workflow:
+1. Refactor functions in src/tools/multi-file.ts to use Promise.all or similar parallelization.
+2. Ensure deterministic result order in outputs.
+3. Replace shell-based file operations with native Node.js fs/promises equivalents.
+4. Add or update tests in tests/multi-file-optimized.test.ts to verify new behavior and order.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: src/tools/multi-file.ts, tests/multi-file-optimized.test.ts
+
+---
+id: echoctl-instinct-file-naming
+trigger: "When creating or renaming a file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct File Naming
+
+## Action
+
+Use camelCase for file names
+
+## Evidence
+
+- Pattern in src/commands, src/core, src/extensions, src/tools
+
+---
+id: echoctl-instinct-function-naming
+trigger: "When defining a function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Function Naming
+
+## Action
+
+Use camelCase for function names
+
+## Evidence
+
+- Pattern in TypeScript codebase
+- Naming conventions section
+
+---
+id: echoctl-instinct-class-naming
+trigger: "When defining a class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Class Naming
+
+## Action
+
+Use PascalCase for class names
+
+## Evidence
+
+- Pattern in TypeScript codebase
+- Naming conventions section
+
+---
+id: echoctl-instinct-constant-naming
+trigger: "When declaring a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Constant Naming
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Pattern in TypeScript codebase
+- Naming conventions section
+
+---
+id: echoctl-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in TypeScript codebase
+- importStyle: relative
+
+---
+id: echoctl-instinct-export-style
+trigger: "When exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in TypeScript codebase
+- exportStyle: named
+
+---
+id: echoctl-instinct-test-location
+trigger: "When adding new tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Test Location
+
+## Action
+
+Place test files in the separate 'tests' folder
+
+## Evidence
+
+- Pattern in folder structure
+- tests/multi-file-optimized.test.ts
+
+---
+id: echoctl-instinct-test-update-for-refactor
+trigger: "When refactoring core logic (e.g., multi-file operations)"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Test Update For Refactor
+
+## Action
+
+Add or update corresponding tests to verify new behavior and order
+
+## Evidence
+
+- parallelize-multi-file-operations workflow
+- tests/multi-file-optimized.test.ts
+
+---
+id: echoctl-instinct-commit-format
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Commit Format
+
+## Action
+
+Use a short, descriptive, freeform message, optionally with emoji and subsystem prefix (e.g., '⚡ Bolt: ...')
+
+## Evidence
+
+- Example commits: '⚡ Bolt: Parallelize multi-file operations (Optimized)'
+
+---
+id: echoctl-instinct-parallelize-multi-file
+trigger: "When someone wants to optimize multi-file operations for speed and reliability"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Parallelize Multi File
+
+## Action
+
+Refactor src/tools/multi-file.ts to use Promise.all or similar parallelization, ensure deterministic result order, replace shell-based file ops with fs/promises, and update/add tests in tests/multi-file-optimized.test.ts
+
+## Evidence
+
+- parallelize-multi-file-operations workflow
+- Commits and files in workflow example
+
