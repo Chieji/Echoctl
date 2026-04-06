@@ -288,3 +288,27 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Build a snapshot of all currently enabled extensions for tool discovery.
+ * Aggregates extensions from all sources into a flat structure.
+ */
+export async function buildExtensionSnapshot(): Promise<{
+  tools: Record<string, Extension>;
+  warnings: string[];
+}> {
+  const registry = getExtensionRegistry();
+  const enabledExtensions = registry.listEnabled();
+  const tools: Record<string, Extension> = {};
+  const warnings: string[] = [];
+
+  for (const ext of enabledExtensions) {
+    if (tools[ext.name]) {
+      warnings.push(`Duplicate tool name detected: ${ext.name}. Only the first one will be used.`);
+      continue;
+    }
+    tools[ext.id] = ext;
+  }
+
+  return { tools, warnings };
+}

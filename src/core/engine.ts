@@ -256,7 +256,7 @@ export class ReActEngine {
       const snapshot = await buildExtensionSnapshot();
       const dynamicTools: Record<string, any> = {};
 
-      for (const descriptor of Object.values(snapshot.tools)) {
+      for (const descriptor of Object.values(snapshot.tools) as any[]) {
         if (Object.prototype.hasOwnProperty.call(staticToolRegistry, descriptor.name)) {
           snapshot.warnings.push(
             `Extension tool '${descriptor.name}' collides with built-in tool name. Built-in tool kept.`

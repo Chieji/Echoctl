@@ -118,13 +118,13 @@ describe('Plugin System', () => {
     it('should handle tool errors', async () => {
       const mockTool = {
         name: 'test-plugin:errorTool',
-        execute: async () => {
+        execute: async (args: any) => {
           throw new Error('Tool execution failed');
         },
       };
 
       try {
-        await mockTool.execute({});
+        await (mockTool as any).execute({});
       } catch (error: any) {
         expect(error.message).toBe('Tool execution failed');
       }
@@ -356,7 +356,7 @@ describe('Plugin System', () => {
 
     it('should handle tool execution errors', async () => {
       const tool = {
-        execute: async () => {
+        execute: async (args: any) => {
           throw new Error('Execution failed');
         },
       };
@@ -364,7 +364,7 @@ describe('Plugin System', () => {
       let errorCaught = false;
 
       try {
-        await tool.execute({});
+        await (tool as any).execute({});
       } catch {
         errorCaught = true;
       }
