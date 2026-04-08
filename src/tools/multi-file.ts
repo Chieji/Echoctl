@@ -224,7 +224,7 @@ export async function deleteFiles(
       if (!existsSync(absPath)) {
         continue;
       }
-      
+
       await execAsync(`rm "${absPath}"`);
       deleted.push(file);
     } catch (error: any) {

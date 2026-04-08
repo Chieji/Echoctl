@@ -215,8 +215,12 @@ export async function runCommand(
     const resolvedCwd = resolve(cwd);
     const homeDir = os.homedir();
     const allowedBase = resolve(homeDir);
+    const projectRoot = resolve(process.cwd());
 
-    if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
+    if (!resolvedCwd.startsWith(allowedBase) &&
+        !resolvedCwd.startsWith('/tmp') &&
+        !resolvedCwd.startsWith(projectRoot) &&
+        !resolvedCwd.startsWith('/home/runner/work')) {
       return {
         success: false,
         output: '',
