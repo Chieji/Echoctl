@@ -3,7 +3,7 @@
  * Batch file operations for efficient codebase modifications
  */
 
-import { readFile, writeFile, mkdir, stat, readdir, cp, rm } from 'fs/promises';
+import { readFile, writeFile, mkdir, stat, readdir } from 'fs/promises';
 import { join, relative } from 'path';
 import { existsSync } from 'fs';
 import { exec } from 'child_process';
@@ -40,32 +40,27 @@ export interface FileSearchResult {
 
 /**
  * Create backup of files before editing
- * Performance: Parallelized file copying and switched to native fs.cp (by Bolt ⚡)
  */
 export async function createBackup(files: string[], cwd: string = process.cwd()): Promise<string> {
   const timestamp = Date.now();
   const backupDir = join(cwd, `.echo-backup-${timestamp}`);
   await mkdir(backupDir, { recursive: true });
 
-  await Promise.all(files.map(async (file) => {
-    try {
-      const absPath = join(cwd, file);
+  for (const file of files) {
+    const absPath = join(cwd, file);
+    if (existsSync(absPath)) {
       const relativePath = relative(cwd, absPath);
       const backupPath = join(backupDir, relativePath);
       await mkdir(join(backupPath, '..'), { recursive: true });
-      // Performance: Use native fs.cp instead of spawning a shell for 'cp' (by Bolt ⚡)
-      await cp(absPath, backupPath);
-    } catch (error) {
-      // If file doesn't exist or can't be copied, skip it
+      await execAsync(`cp "${absPath}" "${backupPath}"`);
     }
-  }));
+  }
 
   return backupDir;
 }
 
 /**
  * Find and replace across multiple files
- * Performance: Process files in parallel using Promise.all (by Bolt ⚡)
  */
 export async function findAndReplace(
   pattern: string | RegExp,
@@ -76,7 +71,7 @@ export async function findAndReplace(
   const edited: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  await Promise.all(files.map(async (file) => {
+  for (const file of files) {
     try {
       const absPath = join(cwd, file);
       const content = await readFile(absPath, 'utf-8');
@@ -93,7 +88,7 @@ export async function findAndReplace(
     } catch (error: any) {
       failed.push({ path: file, error: error.message });
     }
-  }));
+  }
 
   return {
     success: failed.length === 0,
@@ -106,7 +101,6 @@ export async function findAndReplace(
 
 /**
  * Search for pattern in multiple files
- * Performance: Search files in parallel using Promise.all (by Bolt ⚡)
  */
 export async function searchInFiles(
   pattern: string | RegExp,
@@ -115,7 +109,7 @@ export async function searchInFiles(
 ): Promise<FileSearchResult[]> {
   const results: FileSearchResult[] = [];
 
-  await Promise.all(files.map(async (file) => {
+  for (const file of files) {
     try {
       const absPath = join(cwd, file);
       const content = await readFile(absPath, 'utf-8');
@@ -145,14 +139,13 @@ export async function searchInFiles(
     } catch {
       // Skip files that can't be read
     }
-  }));
+  }
 
   return results;
 }
 
 /**
  * Batch create files
- * Performance: Create files in parallel using Promise.all (by Bolt ⚡)
  */
 export async function createFiles(
   files: Array<{ path: string; content: string }>,
@@ -161,7 +154,7 @@ export async function createFiles(
   const created: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  await Promise.all(files.map(async ({ path: filePath, content }) => {
+  for (const { path: filePath, content } of files) {
     try {
       const absPath = join(cwd, filePath);
       await mkdir(join(absPath, '..'), { recursive: true });
@@ -170,7 +163,7 @@ export async function createFiles(
     } catch (error: any) {
       failed.push({ path: filePath, error: error.message });
     }
-  }));
+  }
 
   return {
     success: failed.length === 0,
@@ -183,7 +176,6 @@ export async function createFiles(
 
 /**
  * Batch update files
- * Performance: Update files in parallel using Promise.all (by Bolt ⚡)
  */
 export async function updateFiles(
   edits: Array<{ path: string; content: string }>,
@@ -192,12 +184,12 @@ export async function updateFiles(
   const edited: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  await Promise.all(edits.map(async ({ path: filePath, content }) => {
+  for (const { path: filePath, content } of edits) {
     try {
       const absPath = join(cwd, filePath);
       if (!existsSync(absPath)) {
         failed.push({ path: filePath, error: 'File not found' });
-        return;
+        continue;
       }
       
       await writeFile(absPath, content, 'utf-8');
@@ -205,7 +197,7 @@ export async function updateFiles(
     } catch (error: any) {
       failed.push({ path: filePath, error: error.message });
     }
-  }));
+  }
 
   return {
     success: failed.length === 0,
@@ -218,7 +210,6 @@ export async function updateFiles(
 
 /**
  * Batch delete files
- * Performance: Parallelized deletions and switched to native fs.rm (by Bolt ⚡)
  */
 export async function deleteFiles(
   files: string[],
@@ -227,16 +218,19 @@ export async function deleteFiles(
   const deleted: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  await Promise.all(files.map(async (file) => {
+  for (const file of files) {
     try {
       const absPath = join(cwd, file);
-      // Performance: Use native fs.rm instead of spawning a shell for 'rm' (by Bolt ⚡)
-      await rm(absPath, { force: true });
+      if (!existsSync(absPath)) {
+        continue;
+      }
+
+      await execAsync(`rm "${absPath}"`);
       deleted.push(file);
     } catch (error: any) {
       failed.push({ path: file, error: error.message });
     }
-  }));
+  }
 
   return {
     success: failed.length === 0,

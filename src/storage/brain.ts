@@ -234,14 +234,13 @@ export class BrainStore {
   search(query: string, tags?: string[]): MemoryItem[] {
     if (!this.db.data) return [];
     
-    let results = searchMemoriesByText(this.db.data.memories, query);
-    
-    // Filter by tags if provided
-    if (tags && tags.length > 0) {
-      results = results.filter(memory =>
-        tags.some(tag => memory.tags.includes(tag))
-      );
-    }
+    // Performance: Bolt ⚡ - use pre-filtered memories if tags are provided.
+    // Filtering by exact tag matches is typically faster than full-text search.
+    let results = tags && tags.length > 0
+      ? this.db.data.memories.filter(memory => tags.some(tag => memory.tags.includes(tag)))
+      : this.db.data.memories;
+
+    results = searchMemoriesByText(results, query);
     
     // Sort by relevance
     return sortByRelevance(results, query);

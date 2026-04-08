@@ -124,7 +124,7 @@ describe('Plugin System', () => {
       };
 
       try {
-        await (mockTool as any).execute();
+        await mockTool.execute({});
       } catch (error: any) {
         expect(error.message).toBe('Tool execution failed');
       }
@@ -364,7 +364,7 @@ describe('Plugin System', () => {
       let errorCaught = false;
 
       try {
-        await (tool as any).execute();
+        await tool.execute({});
       } catch {
         errorCaught = true;
       }
@@ -385,7 +385,7 @@ describe('Plugin System', () => {
         },
       };
 
-      const result = await (tool as any).execute({});
+      const result = await tool.execute({});
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('required');
