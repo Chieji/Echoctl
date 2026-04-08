@@ -264,8 +264,8 @@ export class ReActEngine {
           continue;
         }
 
-        dynamicTools[descriptor.name] = async (args: any) => descriptor.invoke(args);
-        dynamicToolDescriptions[descriptor.name] = descriptor.description;
+        dynamicTools[descriptor.name] = async (args: any) => (descriptor as any).invoke(args);
+        dynamicToolDescriptions[descriptor.name] = (descriptor as any).description;
       }
 
       this.toolRegistry = {
