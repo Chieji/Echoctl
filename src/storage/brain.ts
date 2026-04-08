@@ -236,6 +236,7 @@ export class BrainStore {
     
     // Performance: Bolt ⚡ - use pre-filtered memories if tags are provided.
     // Filtering by exact tag matches is typically faster than full-text search.
+    // Impact: Reduces O(N) full-text search overhead by reducing working set size early.
     let results = tags && tags.length > 0
       ? this.db.data.memories.filter(memory => tags.some(tag => memory.tags.includes(tag)))
       : this.db.data.memories;

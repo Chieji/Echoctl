@@ -288,3 +288,62 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension snapshot for discovery
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, Extension>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of current extensions for discovery
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const registry = getExtensionRegistry();
+  const warnings: string[] = [];
+  const tools: Record<string, Extension> = {};
+
+  try {
+    // 1. Load from persistence
+    await registry.loadFromPersistence();
+
+    // 2. Add MCP tools
+    try {
+      const { getMCPManager } = await import('./mcp.js');
+      const mcpManager = await getMCPManager();
+      const mcpToolsMap = await mcpManager.getAllTools();
+
+      for (const [id, entry] of Object.entries(mcpToolsMap)) {
+        const { tool, client } = entry;
+        const extension: Extension = {
+          id,
+          name: tool.name,
+          description: tool.description || '',
+          source: 'mcp',
+          enabled: true,
+          inputSchema: tool.inputSchema,
+          invoke: async (args: any) => client.callTool(tool.name, args),
+          mcpConfig: {
+            serverName: client.name
+          }
+        };
+        tools[id] = extension;
+      }
+    } catch (err: any) {
+      warnings.push(`Failed to load MCP tools: ${err.message}`);
+    }
+
+    // 3. Add Plugins
+    const plugins = registry.listBySource('plugin');
+    for (const plugin of plugins) {
+      tools[plugin.id] = plugin;
+    }
+
+  } catch (err: any) {
+    warnings.push(`Registry load failed: ${err.message}`);
+  }
+
+  return { tools, warnings };
+}
