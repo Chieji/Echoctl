@@ -92,7 +92,7 @@ export async function findAndReplace(
       const absPath = join(cwd, file);
       const content = await readFile(absPath, 'utf-8');
 
-      // Ensure we don't share stateful RegExps across concurrent calls (by Bolt ⚡)
+      // Re-create RegExp to ensure it's not shared and maintains expected behavior (by Bolt ⚡)
       const regex = typeof pattern === 'string' 
         ? new RegExp(pattern, 'g')
         : new RegExp(pattern.source, pattern.flags);

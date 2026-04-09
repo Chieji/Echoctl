@@ -288,3 +288,54 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension Tool Snapshot - structure for ReAct engine
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, Extension>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of all currently enabled extension tools
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const registry = getExtensionRegistry();
+  const snapshot: ExtensionSnapshot = {
+    tools: {},
+    warnings: [],
+  };
+
+  // 1. Get enabled extensions from registry (plugins/skills)
+  const enabledExtensions = registry.listEnabled();
+  for (const ext of enabledExtensions) {
+    snapshot.tools[ext.name] = ext;
+  }
+
+  // 2. Get MCP tools
+  try {
+    const { getMCPManager } = await import('./mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+
+    for (const [name, { tool, client }] of Object.entries(mcpTools)) {
+      snapshot.tools[name] = {
+        id: name,
+        name: name,
+        description: tool.description || '',
+        source: 'mcp',
+        inputSchema: tool.inputSchema,
+        invoke: async (args: any) => client.callTool(tool.name, args),
+        enabled: true,
+        mcpConfig: {
+          serverName: client.name,
+        },
+      };
+    }
+  } catch (error: any) {
+    snapshot.warnings.push(`MCP tool integration failed: ${error.message}`);
+  }
+
+  return snapshot;
+}
