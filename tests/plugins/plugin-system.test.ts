@@ -48,7 +48,7 @@ describe('Plugin System', () => {
           testTool: {
             name: 'test-plugin:testTool',
             description: 'Test tool',
-            execute: async () => ({ success: true }),
+            execute: async (args?: any) => ({ success: true }),
           },
         },
       });
@@ -118,7 +118,7 @@ describe('Plugin System', () => {
     it('should handle tool errors', async () => {
       const mockTool = {
         name: 'test-plugin:errorTool',
-        execute: async () => {
+        execute: async (args?: any) => {
           throw new Error('Tool execution failed');
         },
       };
@@ -135,15 +135,15 @@ describe('Plugin System', () => {
         tools: {
           tool1: {
             name: 'multi-tool-plugin:tool1',
-            execute: async () => ({ success: true }),
+            execute: async (args?: any) => ({ success: true }),
           },
           tool2: {
             name: 'multi-tool-plugin:tool2',
-            execute: async () => ({ success: true }),
+            execute: async (args?: any) => ({ success: true }),
           },
           tool3: {
             name: 'multi-tool-plugin:tool3',
-            execute: async () => ({ success: true }),
+            execute: async (args?: any) => ({ success: true }),
           },
         },
       });
@@ -302,7 +302,7 @@ describe('Plugin System', () => {
       await pluginManager.loadPlugin('plugin-a', {
         tools: {
           toolA: {
-            execute: async () => ({ result: 'A' }),
+            execute: async (args?: any) => ({ result: 'A' }),
           },
         },
       });
@@ -310,7 +310,7 @@ describe('Plugin System', () => {
       await pluginManager.loadPlugin('plugin-b', {
         tools: {
           toolB: {
-            execute: async () => ({ result: 'B' }),
+            execute: async (args?: any) => ({ result: 'B' }),
           },
         },
       });
@@ -356,7 +356,7 @@ describe('Plugin System', () => {
 
     it('should handle tool execution errors', async () => {
       const tool = {
-        execute: async () => {
+        execute: async (args?: any) => {
           throw new Error('Execution failed');
         },
       };

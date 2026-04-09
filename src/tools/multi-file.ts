@@ -3,14 +3,26 @@
  * Batch file operations for efficient codebase modifications
  */
 
-import { readFile, writeFile, mkdir, stat, readdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, stat, readdir, cp, rm, access } from 'fs/promises';
 import { join, relative } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, constants } from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createHash } from 'crypto';
 
 const execAsync = promisify(exec);
+
+/**
+ * Asynchronous check if file exists
+ */
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export interface FileEdit {
   path: string;
@@ -46,15 +58,18 @@ export async function createBackup(files: string[], cwd: string = process.cwd())
   const backupDir = join(cwd, `.echo-backup-${timestamp}`);
   await mkdir(backupDir, { recursive: true });
 
-  for (const file of files) {
+  // Parallelize backup operations to improve performance (by Bolt ⚡)
+  await Promise.all(files.map(async (file) => {
     const absPath = join(cwd, file);
-    if (existsSync(absPath)) {
+    const exists = await fileExists(absPath);
+    if (exists) {
       const relativePath = relative(cwd, absPath);
       const backupPath = join(backupDir, relativePath);
       await mkdir(join(backupPath, '..'), { recursive: true });
-      await execAsync(`cp "${absPath}" "${backupPath}"`);
+      // Use native fs.cp instead of exec child process for better performance (by Bolt ⚡)
+      await cp(absPath, backupPath, { recursive: true });
     }
-  }
+  }));
 
   return backupDir;
 }
@@ -71,13 +86,16 @@ export async function findAndReplace(
   const edited: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  for (const file of files) {
+  // Parallelize find and replace across multiple files (by Bolt ⚡)
+  await Promise.all(files.map(async (file) => {
     try {
       const absPath = join(cwd, file);
       const content = await readFile(absPath, 'utf-8');
+
+      // Re-create RegExp to ensure it's not shared and maintains expected behavior (by Bolt ⚡)
       const regex = typeof pattern === 'string' 
         ? new RegExp(pattern, 'g')
-        : pattern;
+        : new RegExp(pattern.source, pattern.flags);
       
       const newContent = content.replace(regex, replacement);
       
@@ -88,7 +106,7 @@ export async function findAndReplace(
     } catch (error: any) {
       failed.push({ path: file, error: error.message });
     }
-  }
+  }));
 
   return {
     success: failed.length === 0,
@@ -109,18 +127,23 @@ export async function searchInFiles(
 ): Promise<FileSearchResult[]> {
   const results: FileSearchResult[] = [];
 
-  for (const file of files) {
+  // Parallelize search across files for better performance (by Bolt ⚡)
+  await Promise.all(files.map(async (file) => {
     try {
       const absPath = join(cwd, file);
       const content = await readFile(absPath, 'utf-8');
       const lines = content.split('\n');
+
+      // Re-create RegExp per-file to avoid shared lastIndex state issues in parallel tasks (by Bolt ⚡)
       const regex = typeof pattern === 'string' 
         ? new RegExp(pattern, 'gi')
-        : pattern;
+        : new RegExp(pattern.source, pattern.flags);
 
       const matches: Array<{ number: number; content: string }> = [];
       
       lines.forEach((line, index) => {
+        // Reset lastIndex if using global flag to ensure consistent matching
+        if (regex.global) regex.lastIndex = 0;
         if (regex.test(line)) {
           matches.push({
             number: index + 1,
@@ -139,7 +162,7 @@ export async function searchInFiles(
     } catch {
       // Skip files that can't be read
     }
-  }
+  }));
 
   return results;
 }
@@ -154,7 +177,8 @@ export async function createFiles(
   const created: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  for (const { path: filePath, content } of files) {
+  // Parallelize file creation (by Bolt ⚡)
+  await Promise.all(files.map(async ({ path: filePath, content }) => {
     try {
       const absPath = join(cwd, filePath);
       await mkdir(join(absPath, '..'), { recursive: true });
@@ -163,7 +187,7 @@ export async function createFiles(
     } catch (error: any) {
       failed.push({ path: filePath, error: error.message });
     }
-  }
+  }));
 
   return {
     success: failed.length === 0,
@@ -184,12 +208,14 @@ export async function updateFiles(
   const edited: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  for (const { path: filePath, content } of edits) {
+  // Parallelize file updates (by Bolt ⚡)
+  await Promise.all(edits.map(async ({ path: filePath, content }) => {
     try {
       const absPath = join(cwd, filePath);
-      if (!existsSync(absPath)) {
+      const exists = await fileExists(absPath);
+      if (!exists) {
         failed.push({ path: filePath, error: 'File not found' });
-        continue;
+        return;
       }
       
       await writeFile(absPath, content, 'utf-8');
@@ -197,7 +223,7 @@ export async function updateFiles(
     } catch (error: any) {
       failed.push({ path: filePath, error: error.message });
     }
-  }
+  }));
 
   return {
     success: failed.length === 0,
@@ -218,19 +244,22 @@ export async function deleteFiles(
   const deleted: string[] = [];
   const failed: Array<{ path: string; error: string }> = [];
 
-  for (const file of files) {
+  // Parallelize deletions and use native Node.js methods for performance (by Bolt ⚡)
+  await Promise.all(files.map(async (file) => {
     try {
       const absPath = join(cwd, file);
-      if (!existsSync(absPath)) {
-        continue;
+      const exists = await fileExists(absPath);
+      if (!exists) {
+        return;
       }
       
-      await execAsync(`rm "${absPath}"`);
+      // Use native fs.rm instead of exec rm to avoid process spawning overhead (by Bolt ⚡)
+      await rm(absPath, { recursive: true, force: true });
       deleted.push(file);
     } catch (error: any) {
       failed.push({ path: file, error: error.message });
     }
-  }
+  }));
 
   return {
     success: failed.length === 0,
