@@ -288,3 +288,53 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension Tool Snapshot - structure of tools collected from all sources
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, Extension>;
+  warnings: string[];
+}
+
+/**
+ * Builds a snapshot of all enabled extension tools (Performance: Bolt ⚡)
+ * This function aggregates tools from MCP and local plugins for engine use.
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const registry = getExtensionRegistry();
+  await registry.loadFromPersistence();
+
+  const snapshot: ExtensionSnapshot = {
+    tools: {},
+    warnings: [],
+  };
+
+  // 1. Add tools from MCP servers
+  try {
+    const { getMCPManager } = await import('../extensions/mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+
+    for (const [key, entry] of Object.entries(mcpTools)) {
+      snapshot.tools[entry.tool.name] = {
+        id: `mcp-${entry.tool.name}`,
+        name: entry.tool.name,
+        description: entry.tool.description || '',
+        source: 'mcp',
+        enabled: true,
+        invoke: async (args: any) => entry.client.callTool(entry.tool.name, args),
+      } as Extension;
+    }
+  } catch (err: any) {
+    snapshot.warnings.push(`Failed to load MCP tools: ${err.message}`);
+  }
+
+  // 2. Add local plugins
+  const enabledPlugins = registry.listBySource('plugin').filter(p => p.enabled);
+  for (const plugin of enabledPlugins) {
+    snapshot.tools[plugin.name] = plugin;
+  }
+
+  return snapshot;
+}

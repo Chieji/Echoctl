@@ -88,7 +88,8 @@ export class ProviderChain {
     for (const name of providerNames) {
       const config = configs[name];
       // Most providers require an API key; Ollama is local and can run with defaults
-      if (config?.apiKey || name === 'ollama') {
+      // We only initialize Ollama if a config object is explicitly provided (Performance: Bolt ⚡)
+      if (config?.apiKey || (name === 'ollama' && config)) {
         this.providers.set(name, createProvider(name, config));
         this.healthMap.set(name, {
           latencies: [],
