@@ -1,9 +1,8 @@
 /**
- * Plugin System Tests for Echoctl
- * Comprehensive tests for plugin loading, execution, and lifecycle
+ * Tests for the plugin system loading, execution, and lifecycle
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 
 // Mock Plugin Manager
 class MockPluginManager {
@@ -107,10 +106,6 @@ describe('Plugin System', () => {
         input: 'test',
       };
 
-      const schema = {
-        input: { type: 'string', required: true },
-      };
-
       const isValid = args.input && typeof args.input === 'string';
       expect(isValid).toBe(true);
     });
@@ -118,7 +113,7 @@ describe('Plugin System', () => {
     it('should handle tool errors', async () => {
       const mockTool = {
         name: 'test-plugin:errorTool',
-        execute: async () => {
+        execute: async (args?: any) => {
           throw new Error('Tool execution failed');
         },
       };
@@ -356,7 +351,7 @@ describe('Plugin System', () => {
 
     it('should handle tool execution errors', async () => {
       const tool = {
-        execute: async () => {
+        execute: async (args?: any) => {
           throw new Error('Execution failed');
         },
       };
