@@ -10,3 +10,7 @@
 ## 2026-04-10 - [TUI Streaming Optimization]
 **Learning:** Frequent React updates during message streaming in a TUI (like character-by-character rendering) can cause significant CPU spikes if expensive operations like syntax highlighting or markdown parsing are not memoized. In Ink/React-based terminals, re-rendering the entire message list on every token is a major bottleneck.
 **Action:** Always memoize components in the message history and use 'useMemo' for expensive transformations (highlighting, regex splitting) to ensure they only run when the content actually changes. Use stable keys (like timestamps) instead of array indices to prevent full list re-renders.
+
+## 2026-04-10 - [Provider Chain CI Fix]
+**Learning:** The 'ProviderChain' was auto-initializing 'ollama' even when all configs were undefined, causing test failures in CI environments where 'ollama' is not available or desired.
+**Action:** Only initialize 'ollama' if its configuration is explicitly provided, ensuring consistent behavior across local and CI environments.
