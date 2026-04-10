@@ -6,3 +6,7 @@
 ## 2026-03-24 - [Cognitive Cycle Memory Optimization]
 **Learning:** Instantiating stateful components like 'LongTermMemory' multiple times within a single cognitive cycle (Perception -> Action -> Reflection) leads to redundant disk I/O and inconsistent in-memory caches. Singleton patterns for these core services ensure cache unified and atomic persistence. Also, 'node_modules' might be tracked by Git in some environments; always verify 'git status' to avoid accidental inclusion in PRs.
 **Action:** Use 'getLongTermMemory()' singleton to unify semantic memory access. Implement FIFO eviction on in-memory caches to prevent unbounded growth in long-running CLI sessions.
+
+## 2026-04-10 - [TUI Streaming Optimization]
+**Learning:** Frequent React updates during message streaming in a TUI (like character-by-character rendering) can cause significant CPU spikes if expensive operations like syntax highlighting or markdown parsing are not memoized. In Ink/React-based terminals, re-rendering the entire message list on every token is a major bottleneck.
+**Action:** Always memoize components in the message history and use 'useMemo' for expensive transformations (highlighting, regex splitting) to ensure they only run when the content actually changes. Use stable keys (like timestamps) instead of array indices to prevent full list re-renders.
