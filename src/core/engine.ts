@@ -10,7 +10,7 @@ import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader
 import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
-import { buildExtensionSnapshot } from '../extensions/registry.js';
+import { buildExtensionSnapshot } from '../extensions/snapshot.js';
 import { BDIEngine } from './bdi-engine.js';
 
 // Initial static tool registry
