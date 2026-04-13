@@ -288,3 +288,58 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension Snapshot for AI consumption
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, {
+    name: string;
+    description: string;
+    source: 'mcp' | 'plugin';
+    invoke: (args: any) => Promise<any>;
+  }>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of all available extensions for the agent
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const registry = getExtensionRegistry();
+  const snapshot: ExtensionSnapshot = {
+    tools: {},
+    warnings: [],
+  };
+
+  // 1. MCP Tools
+  try {
+    const { getMCPManager } = await import('./mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+
+    for (const [key, { tool, client }] of Object.entries(mcpTools)) {
+      snapshot.tools[key] = {
+        name: key,
+        description: tool.description || 'No description',
+        source: 'mcp',
+        invoke: (args) => client.callTool(tool.name, args),
+      };
+    }
+  } catch (error: any) {
+    snapshot.warnings.push(`MCP error: ${error.message}`);
+  }
+
+  // 2. Local Plugins
+  const plugins = registry.listBySource('plugin').filter(p => p.enabled);
+  for (const plugin of plugins) {
+    snapshot.tools[plugin.id] = {
+      name: plugin.name,
+      description: plugin.description,
+      source: 'plugin',
+      invoke: (args) => plugin.invoke(args),
+    };
+  }
+
+  return snapshot;
+}
