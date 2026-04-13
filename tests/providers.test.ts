@@ -49,8 +49,8 @@ describe('ProviderChain', () => {
         smart: undefined,
       });
 
-      // All providers should be unavailable without API keys
-      expect(chain.getConfiguredProviders()).toEqual([]);
+      // Ollama is local and always configured; others require API keys
+      expect(chain.getConfiguredProviders()).toEqual(['ollama']);
     });
   });
 
