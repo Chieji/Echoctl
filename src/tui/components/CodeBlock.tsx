@@ -3,7 +3,7 @@
  * Syntax highlighted code display
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
 import { highlight } from 'cli-highlight';
 
@@ -13,14 +13,16 @@ interface CodeBlockProps {
   showLineNumbers?: boolean;
 }
 
-export function CodeBlock({ code, language = 'text', showLineNumbers = false }: CodeBlockProps) {
+export const CodeBlock = React.memo(({ code, language = 'text', showLineNumbers = false }: CodeBlockProps) => {
   // Use cli-highlight for syntax highlighting
-  const highlighted = highlight(code, {
-    language: detectLanguage(language),
-    ignoreIllegals: true,
-  });
+  const highlighted = useMemo(() => {
+    return highlight(code, {
+      language: detectLanguage(language),
+      ignoreIllegals: true,
+    });
+  }, [code, language]);
   
-  const lines = highlighted.split('\n');
+  const lines = useMemo(() => highlighted.split('\n'), [highlighted]);
   
   return (
     <Box flexDirection="column" paddingX={1} borderStyle="single" borderColor="gray">
@@ -38,41 +40,41 @@ export function CodeBlock({ code, language = 'text', showLineNumbers = false }: 
       ))}
     </Box>
   );
-}
+});
+
+const LANG_MAP: Record<string, string> = {
+  'js': 'javascript',
+  'ts': 'typescript',
+  'jsx': 'javascript',
+  'tsx': 'typescript',
+  'py': 'python',
+  'rb': 'ruby',
+  'rs': 'rust',
+  'go': 'go',
+  'java': 'java',
+  'c': 'c',
+  'cpp': 'cpp',
+  'cs': 'csharp',
+  'sh': 'bash',
+  'bash': 'bash',
+  'zsh': 'bash',
+  'fish': 'fish',
+  'json': 'json',
+  'yaml': 'yaml',
+  'yml': 'yaml',
+  'toml': 'toml',
+  'xml': 'xml',
+  'html': 'html',
+  'css': 'css',
+  'scss': 'scss',
+  'sql': 'sql',
+  'md': 'markdown',
+  'markdown': 'markdown',
+};
 
 /**
  * Detect language from code block marker
  */
 export function detectLanguage(marker: string): string {
-  const langMap: Record<string, string> = {
-    'js': 'javascript',
-    'ts': 'typescript',
-    'jsx': 'javascript',
-    'tsx': 'typescript',
-    'py': 'python',
-    'rb': 'ruby',
-    'rs': 'rust',
-    'go': 'go',
-    'java': 'java',
-    'c': 'c',
-    'cpp': 'cpp',
-    'cs': 'csharp',
-    'sh': 'bash',
-    'bash': 'bash',
-    'zsh': 'bash',
-    'fish': 'fish',
-    'json': 'json',
-    'yaml': 'yaml',
-    'yml': 'yaml',
-    'toml': 'toml',
-    'xml': 'xml',
-    'html': 'html',
-    'css': 'css',
-    'scss': 'scss',
-    'sql': 'sql',
-    'md': 'markdown',
-    'markdown': 'markdown',
-  };
-  
-  return langMap[marker.toLowerCase()] || marker;
+  return LANG_MAP[marker.toLowerCase()] || marker;
 }
