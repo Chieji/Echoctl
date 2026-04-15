@@ -3,7 +3,7 @@
  * Displays conversation history with syntax highlighting
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { Box, Text } from 'ink';
 import { Message as MessageType } from '../../types/index.js';
 import { ViewMode } from '../types.js';
@@ -39,8 +39,8 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
         </Box>
       ) : (
         <>
-          {visibleMessages.map((msg, index) => (
-            <MessageItem key={index} message={msg} />
+          {visibleMessages.map((msg) => (
+            <MessageItem key={msg.timestamp} message={msg} />
           ))}
           {streamingMessage && (
             <MessageItem message={streamingMessage} isStreaming />
@@ -62,7 +62,7 @@ interface MessageItemProps {
   isStreaming?: boolean;
 }
 
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+const MessageItem = memo(({ message, isStreaming = false }: MessageItemProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -88,16 +88,21 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
       <MessageContent content={message.content} />
     </Box>
   );
-}
+});
 
 interface MessageContentProps {
   content: string;
 }
 
-function MessageContent({ content }: MessageContentProps) {
+/**
+ * Regex for detecting markdown code blocks.
+ * Moved to module level to avoid re-allocation during streaming (Performance: Bolt ⚡)
+ */
+const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
+
+const MessageContent = memo(({ content }: MessageContentProps) => {
   // Check for code blocks (```language ... ```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = content.split(codeBlockRegex);
+  const parts = content.split(CODE_BLOCK_REGEX);
   
   if (parts.length === 1) {
     // No code blocks, just render text
@@ -108,12 +113,18 @@ function MessageContent({ content }: MessageContentProps) {
   return (
     <Box flexDirection="column">
       {parts.map((part, index) => {
-        // Even indices are text, odd indices are language+code
-        if (index % 2 === 0) {
+        // With capturing groups in split, the result is [text, lang, code, text, lang, code, ...]
+        // Every 3 parts correspond to one code block match (plus the initial/intervening text)
+        // index 0: text before first block
+        // index 1: lang of first block
+        // index 2: code of first block
+        // index 3: text between first and second block
+
+        if (index % 3 === 0) {
           // Text content
-          return part.trim() ? <Text key={index}>{part}</Text> : null;
-        } else {
-          // Language identifier (next part will be code)
+          return part ? <Text key={index}>{part}</Text> : null;
+        } else if (index % 3 === 1) {
+          // Language identifier
           const language = part || 'text';
           const code = parts[index + 1] || '';
           return (
@@ -122,7 +133,9 @@ function MessageContent({ content }: MessageContentProps) {
             </Box>
           );
         }
+        // index % 3 === 2 is the code which we handled in index % 3 === 1
+        return null;
       })}
     </Box>
   );
-}
+});
