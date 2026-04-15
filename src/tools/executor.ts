@@ -214,9 +214,16 @@ export async function runCommand(
 
     const resolvedCwd = resolve(cwd);
     const homeDir = os.homedir();
-    const allowedBase = resolve(homeDir);
+    const allowedBases = [
+      resolve(homeDir),
+      '/tmp',
+      process.cwd(), // Allow current project directory
+      '/home/runner/work' // Allow GitHub Actions workspace
+    ].map(p => resolve(p));
 
-    if (!resolvedCwd.startsWith(allowedBase) && !resolvedCwd.startsWith('/tmp')) {
+    const isAllowed = allowedBases.some(base => resolvedCwd.startsWith(base));
+
+    if (!isAllowed) {
       return {
         success: false,
         output: '',

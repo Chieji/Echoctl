@@ -12,7 +12,7 @@ import { BDIEngine } from '../core/bdi.js';
 import Enquirer from 'enquirer';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { buildExtensionSnapshot } from '../extensions/registry.js';
+import { buildExtensionSnapshot, ExtensionToolDescriptor } from '../extensions/registry.js';
 
 /**
  * Run agent mode with a task
@@ -152,7 +152,7 @@ export async function agentTools(): Promise<void> {
       plugin: [],
     };
 
-    for (const descriptor of Object.values(snapshot.tools)) {
+    for (const descriptor of Object.values(snapshot.tools) as ExtensionToolDescriptor[]) {
       bySource[descriptor.source].push(descriptor.name);
     }
 

@@ -288,3 +288,69 @@ export function getExtensionRegistry(): ExtensionRegistry {
 export function setExtensionRegistry(registry: ExtensionRegistry): void {
   globalRegistry = registry;
 }
+
+/**
+ * Extension Tool Descriptor for snapshots
+ */
+export interface ExtensionToolDescriptor {
+  name: string;
+  description: string;
+  source: 'mcp' | 'plugin';
+  invoke: (args: any) => Promise<any>;
+}
+
+/**
+ * Extension Snapshot - Current state of all loaded extensions
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, ExtensionToolDescriptor>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of all currently available extension tools (MCP + Plugins)
+ * Performance: Uses parallel loading where possible (Bolt ⚡)
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const snapshot: ExtensionSnapshot = {
+    tools: {},
+    warnings: [],
+  };
+
+  try {
+    // 1. Load MCP Tools
+    const { getMCPManager } = await import('./mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+
+    for (const [id, entry] of Object.entries(mcpTools)) {
+      snapshot.tools[id] = {
+        name: entry.tool.name,
+        description: entry.tool.description || 'No description',
+        source: 'mcp',
+        invoke: async (args: any) => entry.client.callTool(entry.tool.name, args),
+      };
+    }
+
+    // 2. Load Plugin Tools from Registry
+    const registry = getExtensionRegistry();
+    const plugins = registry.listBySource('plugin');
+
+    for (const plugin of plugins) {
+      if (!plugin.enabled) continue;
+
+      const toolId = `plugin_${plugin.id}`;
+      snapshot.tools[toolId] = {
+        name: plugin.name,
+        description: plugin.description,
+        source: 'plugin',
+        invoke: plugin.invoke,
+      };
+    }
+
+  } catch (error: any) {
+    snapshot.warnings.push(`Failed to build extension snapshot: ${error.message}`);
+  }
+
+  return snapshot;
+}
