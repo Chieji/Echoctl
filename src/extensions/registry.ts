@@ -274,6 +274,65 @@ export class ExtensionRegistry {
 }
 
 /**
+ * Snapshot of all available extension tools
+ */
+export interface ExtensionSnapshot {
+  tools: Record<string, Extension>;
+  warnings: string[];
+}
+
+/**
+ * Build a snapshot of all enabled extension tools (MCP + Plugins)
+ */
+export async function buildExtensionSnapshot(): Promise<ExtensionSnapshot> {
+  const snapshot: ExtensionSnapshot = {
+    tools: {},
+    warnings: [],
+  };
+
+  try {
+    // 1. Get MCP tools
+    const { getMCPManager } = await import('./mcp.js');
+    const mcpManager = await getMCPManager();
+    const mcpTools = await mcpManager.getAllTools();
+
+    for (const [key, { tool, client }] of Object.entries(mcpTools)) {
+      snapshot.tools[key] = {
+        id: key,
+        name: tool.name,
+        description: tool.description || '',
+        source: 'mcp',
+        enabled: true,
+        invoke: (args) => client.callTool(tool.name, args),
+        mcpConfig: {
+          serverName: client.name,
+        },
+      };
+    }
+
+    // 2. Get Plugin tools
+    const { pluginManager } = await import('../services/PluginManager.js');
+    const pluginTools = pluginManager.getTools();
+
+    for (const [key, tool] of Object.entries(pluginTools)) {
+      // Plugin tools might already have names or we use the key
+      snapshot.tools[key] = {
+        id: key,
+        name: tool.name || key,
+        description: tool.description || '',
+        source: 'plugin',
+        enabled: true,
+        invoke: (args) => tool.execute ? tool.execute(args) : tool(args),
+      };
+    }
+  } catch (error: any) {
+    snapshot.warnings.push(`Failed to build extension snapshot: ${error.message}`);
+  }
+
+  return snapshot;
+}
+
+/**
  * Global registry instance
  */
 let globalRegistry: ExtensionRegistry | null = null;
