@@ -153,9 +153,8 @@ export async function agentTools(): Promise<void> {
     };
 
     for (const descriptor of Object.values(snapshot.tools)) {
-      const ext = descriptor as Extension;
-      if (ext.source === 'mcp' || ext.source === 'plugin') {
-        bySource[ext.source].push(ext.name);
+      if (descriptor.source === 'mcp' || descriptor.source === 'plugin') {
+        bySource[descriptor.source].push(descriptor.name);
       }
     }
 

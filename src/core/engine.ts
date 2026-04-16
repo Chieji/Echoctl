@@ -257,16 +257,15 @@ export class ReActEngine {
       const dynamicTools: Record<string, any> = {};
 
       for (const descriptor of Object.values(snapshot.tools)) {
-        const tool = descriptor as Extension;
-        if (Object.prototype.hasOwnProperty.call(staticToolRegistry, tool.name)) {
+        if (Object.prototype.hasOwnProperty.call(staticToolRegistry, descriptor.name)) {
           snapshot.warnings.push(
-            `Extension tool '${tool.name}' collides with built-in tool name. Built-in tool kept.`
+            `Extension tool '${descriptor.name}' collides with built-in tool name. Built-in tool kept.`
           );
           continue;
         }
 
-        dynamicTools[tool.name] = async (args: any) => tool.invoke(args);
-        dynamicToolDescriptions[tool.name] = tool.description;
+        dynamicTools[descriptor.name] = async (args: any) => descriptor.invoke(args);
+        dynamicToolDescriptions[descriptor.name] = descriptor.description;
       }
 
       this.toolRegistry = {
