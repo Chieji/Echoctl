@@ -39,8 +39,8 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
         </Box>
       ) : (
         <>
-          {visibleMessages.map((msg, index) => (
-            <MessageItem key={index} message={msg} />
+          {visibleMessages.map((msg) => (
+            <MessageItem key={msg.timestamp} message={msg} />
           ))}
           {streamingMessage && (
             <MessageItem message={streamingMessage} isStreaming />
@@ -62,7 +62,7 @@ interface MessageItemProps {
   isStreaming?: boolean;
 }
 
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+const MessageItem = React.memo(({ message, isStreaming = false }: MessageItemProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -88,16 +88,19 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
       <MessageContent content={message.content} />
     </Box>
   );
-}
+});
 
 interface MessageContentProps {
   content: string;
 }
 
-function MessageContent({ content }: MessageContentProps) {
+// Regex to match markdown code blocks
+// Moving it to module level avoids re-allocation on every render
+const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
+
+const MessageContent = React.memo(({ content }: MessageContentProps) => {
   // Check for code blocks (```language ... ```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = content.split(codeBlockRegex);
+  const parts = content.split(CODE_BLOCK_REGEX);
   
   if (parts.length === 1) {
     // No code blocks, just render text
@@ -125,4 +128,4 @@ function MessageContent({ content }: MessageContentProps) {
       })}
     </Box>
   );
-}
+});
