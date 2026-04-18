@@ -10,7 +10,7 @@ import { loadEchoContext, formatContextForPrompt } from '../tools/context-loader
 import chalk from 'chalk';
 import ora from 'ora';
 import Enquirer from 'enquirer';
-import { buildExtensionSnapshot } from '../extensions/snapshot.js';
+import { buildExtensionSnapshot } from '../extensions/registry.js';
 import { BDIEngine } from './bdi-engine.js';
 
 // Initial static tool registry
@@ -256,16 +256,16 @@ export class ReActEngine {
       const snapshot = await buildExtensionSnapshot();
       const dynamicTools: Record<string, any> = {};
 
-      for (const tool of Object.values(snapshot.tools)) {
-        if (Object.prototype.hasOwnProperty.call(staticToolRegistry, tool.name)) {
+      for (const descriptor of Object.values(snapshot.tools)) {
+        if (Object.prototype.hasOwnProperty.call(staticToolRegistry, descriptor.name)) {
           snapshot.warnings.push(
-            `Extension tool '${tool.name}' collides with built-in tool name. Built-in tool kept.`
+            `Extension tool '${descriptor.name}' collides with built-in tool name. Built-in tool kept.`
           );
           continue;
         }
 
-        dynamicTools[tool.name] = async (args: any) => tool.invoke(args);
-        dynamicToolDescriptions[tool.name] = tool.description;
+        dynamicTools[descriptor.name] = async (args: any) => descriptor.invoke(args);
+        dynamicToolDescriptions[descriptor.name] = descriptor.description;
       }
 
       this.toolRegistry = {
