@@ -3,7 +3,7 @@
  * Displays conversation history with syntax highlighting
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo, useMemo } from 'react';
 import { Box, Text } from 'ink';
 import { Message as MessageType } from '../../types/index.js';
 import { ViewMode } from '../types.js';
@@ -39,8 +39,8 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
         </Box>
       ) : (
         <>
-          {visibleMessages.map((msg, index) => (
-            <MessageItem key={index} message={msg} />
+          {visibleMessages.map((msg) => (
+            <MessageItem key={msg.timestamp} message={msg} />
           ))}
           {streamingMessage && (
             <MessageItem message={streamingMessage} isStreaming />
@@ -57,12 +57,15 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
   );
 }
 
+// Check for code blocks (```language ... ```)
+const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
+
 interface MessageItemProps {
   message: MessageType;
   isStreaming?: boolean;
 }
 
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+const MessageItem = memo(({ message, isStreaming = false }: MessageItemProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -88,16 +91,14 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
       <MessageContent content={message.content} />
     </Box>
   );
-}
+});
 
 interface MessageContentProps {
   content: string;
 }
 
-function MessageContent({ content }: MessageContentProps) {
-  // Check for code blocks (```language ... ```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = content.split(codeBlockRegex);
+const MessageContent = memo(({ content }: MessageContentProps) => {
+  const parts = useMemo(() => content.split(CODE_BLOCK_REGEX), [content]);
   
   if (parts.length === 1) {
     // No code blocks, just render text
@@ -125,4 +126,4 @@ function MessageContent({ content }: MessageContentProps) {
       })}
     </Box>
   );
-}
+});
