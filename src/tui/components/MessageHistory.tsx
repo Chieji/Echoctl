@@ -3,7 +3,7 @@
  * Displays conversation history with syntax highlighting
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { Box, Text } from 'ink';
 import { Message as MessageType } from '../../types/index.js';
 import { ViewMode } from '../types.js';
@@ -16,6 +16,9 @@ interface MessageHistoryProps {
   streamingMessage?: MessageType | null;
 }
 
+/**
+ * MessageHistory displays the conversation thread.
+ */
 export function MessageHistory({ messages, isProcessing, mode, streamingMessage }: MessageHistoryProps) {
   const scrollRef = useRef(0);
 
@@ -39,8 +42,9 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
         </Box>
       ) : (
         <>
-          {visibleMessages.map((msg, index) => (
-            <MessageItem key={index} message={msg} />
+          {visibleMessages.map((msg) => (
+            /* Using timestamp as key instead of index for better React reconciliation (Performance: Bolt ⚡) */
+            <MessageItem key={msg.timestamp} message={msg} />
           ))}
           {streamingMessage && (
             <MessageItem message={streamingMessage} isStreaming />
@@ -62,7 +66,11 @@ interface MessageItemProps {
   isStreaming?: boolean;
 }
 
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+/**
+ * MessageItem displays a single message.
+ * Optimized with React.memo to prevent re-renders when history grows (Performance: Bolt ⚡)
+ */
+const MessageItem = memo(function MessageItem({ message, isStreaming = false }: MessageItemProps) {
   const isUser = message.role === 'user';
 
   return (
@@ -88,16 +96,22 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
       <MessageContent content={message.content} />
     </Box>
   );
-}
+});
 
 interface MessageContentProps {
   content: string;
 }
 
-function MessageContent({ content }: MessageContentProps) {
-  // Check for code blocks (```language ... ```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = content.split(codeBlockRegex);
+// Check for code blocks (```language ... ```)
+// Moved outside component to avoid repeated regex compilation (Performance: Bolt ⚡)
+const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
+
+/**
+ * MessageContent parses and renders message text with code blocks.
+ * Optimized with React.memo to skip re-parsing unchanged messages (Performance: Bolt ⚡)
+ */
+const MessageContent = memo(function MessageContent({ content }: MessageContentProps) {
+  const parts = content.split(CODE_BLOCK_REGEX);
   
   if (parts.length === 1) {
     // No code blocks, just render text
@@ -125,4 +139,4 @@ function MessageContent({ content }: MessageContentProps) {
       })}
     </Box>
   );
-}
+});

@@ -12,7 +12,7 @@ import { BDIEngine } from '../core/bdi.js';
 import Enquirer from 'enquirer';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { buildExtensionSnapshot } from '../extensions/registry.js';
+import { buildExtensionSnapshot } from '../extensions/snapshot.js';
 
 /**
  * Run agent mode with a task
