@@ -3,7 +3,7 @@
  * Displays conversation history with syntax highlighting
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
 import { Message as MessageType } from '../../types/index.js';
 import { ViewMode } from '../types.js';
@@ -16,15 +16,15 @@ interface MessageHistoryProps {
   streamingMessage?: MessageType | null;
 }
 
+/**
+ * ECHOMEN TUI Components - MessageHistory
+ * Displays conversation history with syntax highlighting
+ * Performance: Optimized with direct slicing and memoized components (Bolt ⚡)
+ */
 export function MessageHistory({ messages, isProcessing, mode, streamingMessage }: MessageHistoryProps) {
-  const scrollRef = useRef(0);
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    scrollRef.current = Math.max(0, messages.length - 10);
-  }, [messages.length, streamingMessage]);
-
-  const visibleMessages = messages.slice(scrollRef.current);
+  // Calculate visible messages directly to avoid redundant useEffect/useRef cycles
+  const scrollOffset = Math.max(0, messages.length - 10);
+  const visibleMessages = messages.slice(scrollOffset);
 
   return (
     <Box flexDirection="column" flexGrow={1} overflow="hidden" padding={1}>
@@ -39,8 +39,9 @@ export function MessageHistory({ messages, isProcessing, mode, streamingMessage 
         </Box>
       ) : (
         <>
-          {visibleMessages.map((msg, index) => (
-            <MessageItem key={index} message={msg} />
+          {visibleMessages.map((msg) => (
+            // Use timestamp as key for stable identity and better memoization performance (Bolt ⚡)
+            <MessageItem key={msg.timestamp} message={msg} />
           ))}
           {streamingMessage && (
             <MessageItem message={streamingMessage} isStreaming />
@@ -62,7 +63,11 @@ interface MessageItemProps {
   isStreaming?: boolean;
 }
 
-function MessageItem({ message, isStreaming = false }: MessageItemProps) {
+/**
+ * MessageItem - Renders a single message
+ * Performance: Memoized to prevent re-renders when other messages update (Bolt ⚡)
+ */
+const MessageItem = React.memo(({ message, isStreaming = false }: MessageItemProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -88,41 +93,54 @@ function MessageItem({ message, isStreaming = false }: MessageItemProps) {
       <MessageContent content={message.content} />
     </Box>
   );
-}
+});
 
 interface MessageContentProps {
   content: string;
 }
 
-function MessageContent({ content }: MessageContentProps) {
-  // Check for code blocks (```language ... ```)
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const parts = content.split(codeBlockRegex);
-  
-  if (parts.length === 1) {
-    // No code blocks, just render text
-    return <Text>{content}</Text>;
-  }
-  
-  // Has code blocks, render with formatting
-  return (
-    <Box flexDirection="column">
-      {parts.map((part, index) => {
-        // Even indices are text, odd indices are language+code
-        if (index % 2 === 0) {
-          // Text content
-          return part.trim() ? <Text key={index}>{part}</Text> : null;
-        } else {
-          // Language identifier (next part will be code)
-          const language = part || 'text';
-          const code = parts[index + 1] || '';
-          return (
-            <Box key={index} marginTop={1} marginBottom={1}>
-              <CodeBlock code={code} language={language} showLineNumbers />
-            </Box>
-          );
-        }
-      })}
-    </Box>
-  );
-}
+// Regex for code blocks (moved to module level to avoid re-allocation)
+const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
+
+/**
+ * MessageContent - Parses and renders text/code blocks
+ * Performance: Memoized to prevent redundant parsing during streaming (Bolt ⚡)
+ */
+const MessageContent = React.memo(({ content }: MessageContentProps) => {
+  // Use useMemo to avoid re-splitting the same content
+  const components = useMemo(() => {
+    // Correctly split content into parts while preserving capture groups
+    // This allows us to alternate between text and code/language pairs
+    const parts = content.split(CODE_BLOCK_REGEX);
+
+    if (parts.length === 1) {
+      return <Text>{content}</Text>;
+    }
+
+    const elements = [];
+    for (let i = 0; i < parts.length; i += 3) {
+      // i: plain text before/between code blocks
+      // i+1: language identifier (if any)
+      // i+2: code content
+
+      const textPart = parts[i];
+      if (textPart && textPart.trim()) {
+        elements.push(<Text key={`text-${i}`}>{textPart}</Text>);
+      }
+
+      if (i + 2 < parts.length) {
+        const language = parts[i+1] || 'text';
+        const code = parts[i+2] || '';
+        elements.push(
+          <Box key={`code-${i}`} marginTop={1} marginBottom={1}>
+            <CodeBlock code={code} language={language} showLineNumbers />
+          </Box>
+        );
+      }
+    }
+
+    return <Box flexDirection="column">{elements}</Box>;
+  }, [content]);
+
+  return components;
+});
