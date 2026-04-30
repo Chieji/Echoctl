@@ -1,0 +1,3 @@
+## 2025-05-14 - Isolate high-frequency state in CliDemo component
+**Learning:** High-frequency state updates (e.g., 100ms CLI simulation) in a large monolithic component like `Home.tsx` trigger expensive full-page re-renders. This impacts performance significantly when complex animations (Framer Motion) are present.
+**Action:** Isolate high-frequency state into dedicated sub-components. Hoist static data (like animation variants and constant arrays) to the module level to prevent unnecessary recreation on every render. Use a mounting guard for async loops to prevent memory leaks and state updates after unmount.
