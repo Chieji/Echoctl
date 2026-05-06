@@ -1,0 +1,3 @@
+## 2025-05-14 - Isolate high-frequency state updates in dedicated sub-components
+**Learning:** In React, high-frequency state updates (e.g., a CLI simulation updating every 100ms) within a large page component (600+ lines) trigger full-page re-renders. This "render blast radius" is extremely inefficient as it forces React to diff the entire component tree, including static sections and complex animations, for every small state change.
+**Action:** Always isolate high-frequency state and its associated logic into the smallest possible leaf component. This "state colocation" ensures that only the relevant part of the UI re-renders, significantly improving FPS and reducing CPU usage during intensive updates.
