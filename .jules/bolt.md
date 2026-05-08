@@ -1,0 +1,3 @@
+## 2026-05-23 - State Isolation for High-Frequency Updates
+**Learning:** High-frequency state updates (e.g., 100ms intervals for animations or simulations) in a large React component (like a main page) trigger full-page re-renders, causing significant overhead and potential main-thread blocking. In this codebase, the CLI demo was triggering ~53 re-renders of the entire `Home.tsx` component.
+**Action:** Always isolate high-frequency state logic into dedicated sub-components. This localizes re-renders to the sub-component, keeping the parent component stable and improving overall application responsiveness.
