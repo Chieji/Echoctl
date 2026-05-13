@@ -1,0 +1,3 @@
+## 2026-05-13 - [State Isolation for High-Frequency Updates]
+**Learning:** High-frequency state updates (e.g., 100ms intervals) in a large React page component (like Home.tsx) can trigger dozens of unnecessary full-page re-renders. This is particularly impactful when the component contains many sub-sections and complex animation variants.
+**Action:** Isolate high-frequency state into dedicated sub-components and use `React.memo` to ensure the parent component remains unaffected by these localized updates. Hoist static objects like animation variants and data arrays to the module level to avoid re-creation on every render.
