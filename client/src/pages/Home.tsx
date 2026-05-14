@@ -1,160 +1,86 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Menu, X, Moon, Sun, Copy, Check, Github, Zap, Shield, Workflow, Code2, Terminal, ChevronRight } from 'lucide-react';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { useTheme } from "@/contexts/ThemeContext";
+import {
+  Menu,
+  X,
+  Moon,
+  Sun,
+  Copy,
+  Check,
+  Github,
+  Zap,
+  Shield,
+  Workflow,
+  Code2,
+  Terminal,
+  ChevronRight,
+} from "lucide-react";
+import CliDemo from "@/components/CliDemo";
 
 /**
  * Premium Professional Design System
- * 
+ *
  * Inspired by: ChatGPT, Claude.ai, Anthropic
- * 
+ *
  * Color Palette:
  * - Primary: Professional Blue (#3b82f6)
  * - Secondary: Purple (#8b5cf6)
  * - Accent: Cyan (#06b6d4)
  * - Success: Emerald (#10b981)
- * 
+ *
  * Typography:
  * - Headlines: IBM Plex Sans, 700 weight
  * - Body: IBM Plex Sans, 400 weight
  * - Code: IBM Plex Mono
- * 
+ *
  * Spacing: Generous whitespace, premium feel
  * Animations: Smooth, subtle, professional
- * 
+ *
  * Performance:
  * - Lazy loading with Intersection Observer
  * - Image lazy loading
  * - Code splitting for sections
  */
 
-/**
- * Lazy Loading Hook - Triggers animations when elements come into view
- * Uses Intersection Observer API for optimal performance
- */
-function useInView(options = {}) {
-  const ref = useRef(null);
-  const [isInView, setIsInView] = useState(false);
+// Hoist animation variants outside component to prevent recreation on every render
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsInView(true);
-        observer.unobserve(entry.target);
-      }
-    }, { threshold: 0.1, ...options });
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
-  }, [options]);
-
-  return [ref, isInView];
-}
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5 },
+  },
+};
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [cliOutput, setCliOutput] = useState<string[]>([]);
-  const [isRunningDemo, setIsRunningDemo] = useState(false);
-
-  // Simulate CLI threat scanning demo
-  const runCliDemo = async () => {
-    setIsRunningDemo(true);
-    setCliOutput([]);
-    
-    const demoSteps = [
-      '$ echoctl scan --target api.example.com --deep',
-      '⟳ Initializing ECHOMEN threat scanner...',
-      '📡 Connecting to threat intelligence database...',
-      '✓ Connected to threat database (v2.8.1)',
-      '',
-      '⟳ Phase 1: Endpoint Discovery',
-      '  ✓ Found 12 endpoints',
-      '  ✓ Analyzing endpoint signatures',
-      '',
-      '⟳ Phase 2: Vulnerability Scanning',
-      '  → GET /api/auth (200 OK)',
-      '  → POST /api/users (201 Created)',
-      '  → GET /api/admin (403 Forbidden)',
-      '  → GET /api/search?q=test (200 OK) ⚠️',
-      '',
-      '⟳ Phase 3: Dependency Analysis',
-      '  ✓ Scanned 127 dependencies',
-      '  ⚠️  Found 3 vulnerabilities:',
-      '    - lodash@4.17.15 (CVE-2021-23337)',
-      '    - express@4.17.1 (Prototype pollution)',
-      '    - axios@0.21.1 (SSRF in redirect handling)',
-      '',
-      '⟳ Phase 4: Security Headers Analysis',
-      '  ✗ Missing: Content-Security-Policy',
-      '  ✗ Missing: X-Frame-Options',
-      '  ✗ Missing: Strict-Transport-Security',
-      '  ✓ Present: X-Content-Type-Options',
-      '',
-      '⟳ Phase 5: Authentication & Authorization',
-      '  ⚠️  JWT tokens lack expiration validation',
-      '  ⚠️  CORS allows all origins (*)',
-      '  ✓ Password hashing: bcrypt (good)',
-      '',
-      '═══════════════════════════════════════',
-      '📊 SCAN RESULTS',
-      '═══════════════════════════════════════',
-      'Threat Level: HIGH 🔴',
-      'Critical Issues: 3',
-      'High Priority: 5',
-      'Medium Priority: 2',
-      'Scan Duration: 3.2s',
-      '',
-      '💡 TOP RECOMMENDATIONS:',
-      '  1. Update lodash to 4.17.21+',
-      '  2. Add security headers middleware',
-      '  3. Implement CORS whitelist',
-      '  4. Add JWT expiration validation',
-      '  5. Enable rate limiting on /api/search',
-      '',
-      '✓ Report saved: .echomen/scan-report-20260423.json',
-      '✓ Scan completed successfully',
-    ];
-
-    for (let i = 0; i < demoSteps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setCliOutput(prev => [...prev, demoSteps[i]]);
-    }
-    
-    setIsRunningDemo(false);
-  };
 
   const copyToClipboard = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
   };
 
   return (
@@ -176,11 +102,11 @@ export default function Home() {
 
           {/* Desktop Navigation */}
           <nav className="hidden gap-8 md:flex">
-            {['Features', 'Demo', 'FAQ', 'Community'].map((item) => (
+            {["Features", "Demo", "FAQ", "Community"].map(item => (
               <motion.a
                 key={item}
                 href={`#${item.toLowerCase()}`}
-                whileHover={{ color: '#3b82f6' }}
+                whileHover={{ color: "#3b82f6" }}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               >
                 {item}
@@ -197,7 +123,7 @@ export default function Home() {
               className="rounded-lg p-2 hover:bg-muted transition-colors"
               aria-label="Toggle theme"
             >
-              {theme === 'light' ? (
+              {theme === "light" ? (
                 <Moon className="h-5 w-5" />
               ) : (
                 <Sun className="h-5 w-5" />
@@ -228,7 +154,7 @@ export default function Home() {
             className="border-t border-border bg-background px-4 py-4 md:hidden"
           >
             <nav className="flex flex-col gap-4">
-              {['Features', 'Demo', 'FAQ', 'Community'].map((item) => (
+              {["Features", "Demo", "FAQ", "Community"].map(item => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
@@ -248,12 +174,13 @@ export default function Home() {
         <div
           className="absolute inset-0 -z-10 opacity-30"
           style={{
-            backgroundImage: 'url(https://d2xsxph8kpxj0f.cloudfront.net/310519663568704090/Fz7rAXkQCqMwwVoPUWcS4j/echomen_hero_premium-FbzwPmrNYC8U8XbZVfsMzS.webp)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundImage:
+              "url(https://d2xsxph8kpxj0f.cloudfront.net/310519663568704090/Fz7rAXkQCqMwwVoPUWcS4j/echomen_hero_premium-FbzwPmrNYC8U8XbZVfsMzS.webp)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
           }}
         />
-        
+
         <div className="container">
           <motion.div
             variants={containerVariants}
@@ -265,14 +192,19 @@ export default function Home() {
               variants={itemVariants}
               className="text-4xl md:text-6xl font-bold leading-tight text-foreground mb-6"
             >
-              The Autonomous Agent Ecosystem Built for <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Action</span>
+              The Autonomous Agent Ecosystem Built for{" "}
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Action
+              </span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
               className="text-lg text-muted-foreground mb-8 max-w-2xl"
             >
-              Seamlessly switch between a high-speed CLI and a powerful Web UI. Execute tasks, manage MCP servers, and automate your workflow with ECHOMEN.
+              Seamlessly switch between a high-speed CLI and a powerful Web UI.
+              Execute tasks, manage MCP servers, and automate your workflow with
+              ECHOMEN.
             </motion.p>
 
             <motion.div
@@ -283,8 +215,8 @@ export default function Home() {
                 size="lg"
                 className="bg-primary hover:bg-primary/90 text-white font-semibold"
                 onClick={() => {
-                  const element = document.getElementById('installation');
-                  element?.scrollIntoView({ behavior: 'smooth' });
+                  const element = document.getElementById("installation");
+                  element?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
                 <Terminal className="mr-2 h-5 w-5" />
@@ -316,66 +248,11 @@ export default function Home() {
               Interactive Threat Scanner Demo
             </h2>
             <p className="text-muted-foreground mb-8 text-lg">
-              See ECHOMEN's CLI in action. Click below to run a live threat scanning simulation.
+              See ECHOMEN's CLI in action. Click below to run a live threat
+              scanning simulation.
             </p>
 
-            {/* CLI Terminal */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-lg">
-              <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center justify-between">
-                <div className="flex gap-2">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                </div>
-                <span className="text-xs font-mono text-muted-foreground">Terminal</span>
-              </div>
-
-              <div className="bg-card p-6 font-mono text-sm h-96 overflow-y-auto">
-                {cliOutput.length === 0 && !isRunningDemo && (
-                  <div className="text-muted-foreground text-center py-20">
-                    <p>Click "Run Demo" to start the threat scanning simulation</p>
-                  </div>
-                )}
-                
-                {cliOutput.map((line, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className={`py-1 ${
-                      line.includes('✓') ? 'text-green-500' :
-                      line.includes('⚠️') ? 'text-yellow-500' :
-                      line.includes('❌') ? 'text-red-500' :
-                      line.includes('$') ? 'text-primary font-bold' :
-                      'text-foreground'
-                    }`}
-                  >
-                    {line}
-                  </motion.div>
-                ))}
-                
-                {isRunningDemo && (
-                  <div className="text-primary animate-pulse">
-                    ▌
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="mt-6"
-            >
-              <Button
-                size="lg"
-                onClick={runCliDemo}
-                disabled={isRunningDemo}
-                className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white font-semibold"
-              >
-                {isRunningDemo ? 'Running Demo...' : 'Run Threat Scan Demo'}
-              </Button>
-            </motion.div>
+            <CliDemo />
           </motion.div>
         </div>
       </section>
@@ -393,7 +270,8 @@ export default function Home() {
               Powerful Features
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl">
-              Everything you need to manage autonomous agents and secure your infrastructure.
+              Everything you need to manage autonomous agents and secure your
+              infrastructure.
             </p>
           </motion.div>
 
@@ -401,46 +279,54 @@ export default function Home() {
             {[
               {
                 icon: <Terminal className="h-8 w-8" />,
-                title: 'Fast CLI',
-                description: 'Lightning-quick command-line interface for power users and automation workflows.',
+                title: "Fast CLI",
+                description:
+                  "Lightning-quick command-line interface for power users and automation workflows.",
               },
               {
                 icon: <Shield className="h-8 w-8" />,
-                title: 'Threat Detection',
-                description: 'Real-time vulnerability scanning and security analysis across your infrastructure.',
+                title: "Threat Detection",
+                description:
+                  "Real-time vulnerability scanning and security analysis across your infrastructure.",
               },
               {
                 icon: <Workflow className="h-8 w-8" />,
-                title: 'Workflow Automation',
-                description: 'Orchestrate complex tasks and manage MCP servers with intuitive automation.',
+                title: "Workflow Automation",
+                description:
+                  "Orchestrate complex tasks and manage MCP servers with intuitive automation.",
               },
               {
                 icon: <Code2 className="h-8 w-8" />,
-                title: 'Developer Friendly',
-                description: 'Comprehensive API and SDK for seamless integration into your projects.',
+                title: "Developer Friendly",
+                description:
+                  "Comprehensive API and SDK for seamless integration into your projects.",
               },
               {
                 icon: <Zap className="h-8 w-8" />,
-                title: 'High Performance',
-                description: 'Optimized for speed with minimal resource consumption and instant feedback.',
+                title: "High Performance",
+                description:
+                  "Optimized for speed with minimal resource consumption and instant feedback.",
               },
               {
                 icon: <ChevronRight className="h-8 w-8" />,
-                title: 'Extensible',
-                description: 'Build custom plugins and extensions to tailor ECHOMEN to your needs.',
+                title: "Extensible",
+                description:
+                  "Build custom plugins and extensions to tailor ECHOMEN to your needs.",
               },
             ].map((feature, idx) => (
               <motion.div
                 key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: idx * 0.1, duration: 0.5 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1, duration: 0.5 }}
                 whileHover={{ y: -5 }}
                 className="p-6 rounded-xl border border-border bg-card hover:shadow-lg transition-all duration-300"
               >
                 <div className="text-primary mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold mb-2 text-foreground">{feature.title}</h3>
+                <h3 className="text-xl font-bold mb-2 text-foreground">
+                  {feature.title}
+                </h3>
                 <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
@@ -477,7 +363,9 @@ export default function Home() {
                   <code>npm install -g echo-ai-cli</code>
                 </pre>
                 <Button
-                  onClick={() => copyToClipboard('npm install -g echo-ai-cli', 1)}
+                  onClick={() =>
+                    copyToClipboard("npm install -g echo-ai-cli", 1)
+                  }
                   variant="outline"
                   className="w-full"
                 >
@@ -502,7 +390,12 @@ export default function Home() {
                   <code>docker run -p 3000:3000 echomen/web-platform</code>
                 </pre>
                 <Button
-                  onClick={() => copyToClipboard('docker run -p 3000:3000 echomen/web-platform', 2)}
+                  onClick={() =>
+                    copyToClipboard(
+                      "docker run -p 3000:3000 echomen/web-platform",
+                      2
+                    )
+                  }
                   variant="outline"
                   className="w-full"
                 >
@@ -541,27 +434,31 @@ export default function Home() {
           <Accordion type="single" collapsible className="w-full space-y-3">
             {[
               {
-                q: 'What is ECHOMEN?',
-                a: 'ECHOMEN is an autonomous agent ecosystem that provides both a high-speed CLI and powerful web UI for managing tasks, MCP servers, and automating workflows.',
+                q: "What is ECHOMEN?",
+                a: "ECHOMEN is an autonomous agent ecosystem that provides both a high-speed CLI and powerful web UI for managing tasks, MCP servers, and automating workflows.",
               },
               {
-                q: 'How do I install ECHOMEN?',
-                a: 'You can install ECHOMEN via npm (npm install -g echo-ai-cli) or use the Docker image for the web platform.',
+                q: "How do I install ECHOMEN?",
+                a: "You can install ECHOMEN via npm (npm install -g echo-ai-cli) or use the Docker image for the web platform.",
               },
               {
-                q: 'Is ECHOMEN open source?',
-                a: 'Yes, ECHOMEN is fully open source and available on GitHub. We welcome contributions from the community.',
+                q: "Is ECHOMEN open source?",
+                a: "Yes, ECHOMEN is fully open source and available on GitHub. We welcome contributions from the community.",
               },
               {
-                q: 'Can I use ECHOMEN in production?',
-                a: 'Absolutely! ECHOMEN is designed for production use with enterprise-grade security and reliability.',
+                q: "Can I use ECHOMEN in production?",
+                a: "Absolutely! ECHOMEN is designed for production use with enterprise-grade security and reliability.",
               },
               {
-                q: 'How do I get support?',
-                a: 'Join our community Discord, check the documentation, or open an issue on GitHub. Our team is always ready to help.',
+                q: "How do I get support?",
+                a: "Join our community Discord, check the documentation, or open an issue on GitHub. Our team is always ready to help.",
               },
             ].map((item, idx) => (
-              <AccordionItem key={idx} value={`item-${idx}`} className="border border-border rounded-lg px-4">
+              <AccordionItem
+                key={idx}
+                value={`item-${idx}`}
+                className="border border-border rounded-lg px-4"
+              >
                 <AccordionTrigger className="hover:text-primary transition-colors">
                   {item.q}
                 </AccordionTrigger>
@@ -593,10 +490,10 @@ export default function Home() {
 
           <div className="grid md:grid-cols-4 gap-6">
             {[
-              { name: 'GitHub', icon: '🐙', url: '#' },
-              { name: 'Discord', icon: '💬', url: '#' },
-              { name: 'Twitter', icon: '𝕏', url: '#' },
-              { name: 'Docs', icon: '📚', url: '#' },
+              { name: "GitHub", icon: "🐙", url: "#" },
+              { name: "Discord", icon: "💬", url: "#" },
+              { name: "Twitter", icon: "𝕏", url: "#" },
+              { name: "Docs", icon: "📚", url: "#" },
             ].map((item, idx) => (
               <motion.a
                 key={idx}
@@ -627,16 +524,21 @@ export default function Home() {
               </p>
             </div>
             {[
-              { title: 'Product', links: ['Features', 'Pricing', 'Security'] },
-              { title: 'Company', links: ['About', 'Blog', 'Careers'] },
-              { title: 'Resources', links: ['Docs', 'API', 'Community'] },
+              { title: "Product", links: ["Features", "Pricing", "Security"] },
+              { title: "Company", links: ["About", "Blog", "Careers"] },
+              { title: "Resources", links: ["Docs", "API", "Community"] },
             ].map((col, idx) => (
               <div key={idx}>
-                <h4 className="font-semibold mb-4 text-foreground">{col.title}</h4>
+                <h4 className="font-semibold mb-4 text-foreground">
+                  {col.title}
+                </h4>
                 <ul className="space-y-2">
-                  {col.links.map((link) => (
+                  {col.links.map(link => (
                     <li key={link}>
-                      <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                      <a
+                        href="#"
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
                         {link}
                       </a>
                     </li>
@@ -649,9 +551,15 @@ export default function Home() {
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
             <p>&copy; 2026 ECHOMEN. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-              <a href="#" className="hover:text-primary transition-colors">Terms</a>
-              <a href="#" className="hover:text-primary transition-colors">Contact</a>
+              <a href="#" className="hover:text-primary transition-colors">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-primary transition-colors">
+                Terms
+              </a>
+              <a href="#" className="hover:text-primary transition-colors">
+                Contact
+              </a>
             </div>
           </div>
         </div>
