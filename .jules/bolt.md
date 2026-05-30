@@ -1,0 +1,3 @@
+## 2025-05-15 - State isolation for high-frequency updates
+**Learning:** In large React components (e.g., Home.tsx with 600+ lines), frequent state updates (like a 100ms interval simulation) trigger expensive full-page re-renders. While React's reconciliation is fast, the sheer volume of components being checked can lead to cumulative overhead and potential jitter.
+**Action:** Isolate high-frequency state and side effects into dedicated sub-components. This confines the re-render scope to the smallest possible UI fragment, ensuring the main page remains stable and performant during background or interactive simulations.
