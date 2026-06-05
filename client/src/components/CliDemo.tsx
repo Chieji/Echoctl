@@ -2,85 +2,92 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
+const DEMO_STEPS = [
+  '$ echoctl scan --target api.example.com --deep',
+  '⟳ Initializing ECHOMEN threat scanner...',
+  '📡 Connecting to threat intelligence database...',
+  '✓ Connected to threat database (v2.8.1)',
+  '',
+  '⟳ Phase 1: Endpoint Discovery',
+  '  ✓ Found 12 endpoints',
+  '  ✓ Analyzing endpoint signatures',
+  '',
+  '⟳ Phase 2: Vulnerability Scanning',
+  '  → GET /api/auth (200 OK)',
+  '  → POST /api/users (201 Created)',
+  '  → GET /api/admin (403 Forbidden)',
+  '  → GET /api/search?q=test (200 OK) ⚠️',
+  '',
+  '⟳ Phase 3: Dependency Analysis',
+  '  ✓ Scanned 127 dependencies',
+  '  ⚠️  Found 3 vulnerabilities:',
+  '    - lodash@4.17.15 (CVE-2021-23337)',
+  '    - express@4.17.1 (Prototype pollution)',
+  '    - axios@0.21.1 (SSRF in redirect handling)',
+  '',
+  '⟳ Phase 4: Security Headers Analysis',
+  '  ✗ Missing: Content-Security-Policy',
+  '  ✗ Missing: X-Frame-Options',
+  '  ✗ Missing: Strict-Transport-Security',
+  '  ✓ Present: X-Content-Type-Options',
+  '',
+  '⟳ Phase 5: Authentication & Authorization',
+  '  ⚠️  JWT tokens lack expiration validation',
+  '  ⚠️  CORS allows all origins (*)',
+  '  ✓ Password hashing: bcrypt (good)',
+  '',
+  '═══════════════════════════════════════',
+  '📊 SCAN RESULTS',
+  '═══════════════════════════════════════',
+  'Threat Level: HIGH 🔴',
+  'Critical Issues: 3',
+  'High Priority: 5',
+  'Medium Priority: 2',
+  'Scan Duration: 3.2s',
+  '',
+  '💡 TOP RECOMMENDATIONS:',
+  '  1. Update lodash to 4.17.21+',
+  '  2. Add security headers middleware',
+  '  3. Implement CORS whitelist',
+  '  4. Add JWT expiration validation',
+  '  5. Enable rate limiting on /api/search',
+  '',
+  '✓ Report saved: .echomen/scan-report-20260423.json',
+  '✓ Scan completed successfully',
+];
+
 export function CliDemo() {
-  const [cliOutput, setCliOutput] = useState<string[]>([]);
+  const [stepIndex, setStepIndex] = useState(0);
   const [isRunningDemo, setIsRunningDemo] = useState(false);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
-  const isMounted = useRef(true);
-
+  // Auto-scroll when new lines appear
   useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  const runCliDemo = async () => {
-    setIsRunningDemo(true);
-    setCliOutput([]);
-
-    const demoSteps = [
-      '$ echoctl scan --target api.example.com --deep',
-      '⟳ Initializing ECHOMEN threat scanner...',
-      '📡 Connecting to threat intelligence database...',
-      '✓ Connected to threat database (v2.8.1)',
-      '',
-      '⟳ Phase 1: Endpoint Discovery',
-      '  ✓ Found 12 endpoints',
-      '  ✓ Analyzing endpoint signatures',
-      '',
-      '⟳ Phase 2: Vulnerability Scanning',
-      '  → GET /api/auth (200 OK)',
-      '  → POST /api/users (201 Created)',
-      '  → GET /api/admin (403 Forbidden)',
-      '  → GET /api/search?q=test (200 OK) ⚠️',
-      '',
-      '⟳ Phase 3: Dependency Analysis',
-      '  ✓ Scanned 127 dependencies',
-      '  ⚠️  Found 3 vulnerabilities:',
-      '    - lodash@4.17.15 (CVE-2021-23337)',
-      '    - express@4.17.1 (Prototype pollution)',
-      '    - axios@0.21.1 (SSRF in redirect handling)',
-      '',
-      '⟳ Phase 4: Security Headers Analysis',
-      '  ✗ Missing: Content-Security-Policy',
-      '  ✗ Missing: X-Frame-Options',
-      '  ✗ Missing: Strict-Transport-Security',
-      '  ✓ Present: X-Content-Type-Options',
-      '',
-      '⟳ Phase 5: Authentication & Authorization',
-      '  ⚠️  JWT tokens lack expiration validation',
-      '  ⚠️  CORS allows all origins (*)',
-      '  ✓ Password hashing: bcrypt (good)',
-      '',
-      '═══════════════════════════════════════',
-      '📊 SCAN RESULTS',
-      '═══════════════════════════════════════',
-      'Threat Level: HIGH 🔴',
-      'Critical Issues: 3',
-      'High Priority: 5',
-      'Medium Priority: 2',
-      'Scan Duration: 3.2s',
-      '',
-      '💡 TOP RECOMMENDATIONS:',
-      '  1. Update lodash to 4.17.21+',
-      '  2. Add security headers middleware',
-      '  3. Implement CORS whitelist',
-      '  4. Add JWT expiration validation',
-      '  5. Enable rate limiting on /api/search',
-      '',
-      '✓ Report saved: .echomen/scan-report-20260423.json',
-      '✓ Scan completed successfully',
-    ];
-
-    for (let i = 0; i < demoSteps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      if (!isMounted.current) return;
-      setCliOutput(prev => [...prev, demoSteps[i]]);
+    const el = terminalRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
     }
+  }, [stepIndex]);
 
-    if (!isMounted.current) return;
-    setIsRunningDemo(false);
+  // Declarative step advancement
+  useEffect(() => {
+    if (!isRunningDemo) return;
+    if (stepIndex >= DEMO_STEPS.length) {
+      setIsRunningDemo(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setStepIndex(i => i + 1);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isRunningDemo, stepIndex]);
+
+  const runCliDemo = () => {
+    setStepIndex(0);
+    setIsRunningDemo(true);
   };
+
+  const displayedLines = DEMO_STEPS.slice(0, stepIndex);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -102,14 +109,17 @@ export function CliDemo() {
           <span className="text-xs font-mono text-muted-foreground">Terminal</span>
         </div>
 
-        <div className="bg-card p-6 font-mono text-sm h-96 overflow-y-auto">
-          {cliOutput.length === 0 && !isRunningDemo && (
+        <div
+          ref={terminalRef}
+          className="bg-card p-6 font-mono text-sm h-96 overflow-y-auto"
+        >
+          {displayedLines.length === 0 && !isRunningDemo && (
             <div className="text-muted-foreground text-center py-20">
               <p>Click "Run Demo" to start the threat scanning simulation</p>
             </div>
           )}
 
-          {cliOutput.map((line, idx) => (
+          {displayedLines.map((line, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, x: -10 }}

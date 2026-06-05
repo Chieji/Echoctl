@@ -2,6 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import helmet from "helmet";
+import compression from "compression";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,11 +12,14 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Serve static files from dist/public in production
-  const staticPath =
-    process.env.NODE_ENV === "production"
-      ? path.resolve(__dirname, "public")
-      : path.resolve(__dirname, "..", "dist", "public");
+  // Security headers
+  app.use(helmet());
+
+  // Response compression
+  app.use(compression());
+
+  // Serve static files from dist/public
+  const staticPath = path.resolve(__dirname, "..", "dist", "public");
 
   app.use(express.static(staticPath));
 
