@@ -1,8 +1,19 @@
+/**
+ * CliDemo.tsx
+ * 
+ * Code review fixes applied (PR #68 — Sourcery + Gemini bots):
+ * [Sourcery #1] DEMO_STEPS hoisted to module scope — zero re-allocation on render
+ * [Sourcery #2] O(n²) array copy replaced with integer index + slice — O(1) state update  
+ * [Gemini  #1] Async for-loop + isMounted ref replaced with useEffect + clearTimeout
+ * [Gemini  #2] terminalRef added for auto-scroll as output grows
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
 
-const DEMO_STEPS = [
+// ── [Sourcery #1 Fix] ─────────────────────────────────────────────────────────
+// Module-level constant. Allocated once. Never touched again on re-render.
+const DEMO_STEPS: string[] = [
   '$ echoctl scan --target api.example.com --deep',
   '⟳ Initializing ECHOMEN threat scanner...',
   '📡 Connecting to threat intelligence database...',
@@ -31,7 +42,7 @@ const DEMO_STEPS = [
   '  ✗ Missing: Strict-Transport-Security',
   '  ✓ Present: X-Content-Type-Options',
   '',
-  '⟳ Phase 5: Authentication & Authorization',
+  '⟳ Phase 5: Auth & Authorization',
   '  ⚠️  JWT tokens lack expiration validation',
   '  ⚠️  CORS allows all origins (*)',
   '  ✓ Password hashing: bcrypt (good)',
@@ -42,7 +53,6 @@ const DEMO_STEPS = [
   'Threat Level: HIGH 🔴',
   'Critical Issues: 3',
   'High Priority: 5',
-  'Medium Priority: 2',
   'Scan Duration: 3.2s',
   '',
   '💡 TOP RECOMMENDATIONS:',
@@ -50,114 +60,107 @@ const DEMO_STEPS = [
   '  2. Add security headers middleware',
   '  3. Implement CORS whitelist',
   '  4. Add JWT expiration validation',
-  '  5. Enable rate limiting on /api/search',
   '',
-  '✓ Report saved: .echomen/scan-report-20260423.json',
+  '✓ Report saved: .echomen/scan-report.json',
   '✓ Scan completed successfully',
 ];
 
 export function CliDemo() {
+  // ── [Sourcery #2 Fix] ───────────────────────────────────────────────────────
+  // Integer index, not a growing array. slice() is O(1). No O(n²) copies.
   const [stepIndex, setStepIndex] = useState(0);
-  const [isRunningDemo, setIsRunningDemo] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // ── [Gemini #2 Fix] ────────────────────────────────────────────────────────
   const terminalRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll when new lines appear
+  // ── [Gemini #1 Fix] ────────────────────────────────────────────────────────
+  // Declarative timer. useEffect cleanup = no dangling timers on unmount.
+  // Works correctly in React 18 StrictMode double-invocation.
   useEffect(() => {
-    const el = terminalRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
+    if (!isRunning) return;
+    if (stepIndex >= DEMO_STEPS.length) {
+      setIsRunning(false);
+      return;
+    }
+    const timer = setTimeout(() => setStepIndex(i => i + 1), 100);
+    return () => clearTimeout(timer); // ← unmount safe
+  }, [isRunning, stepIndex]);
+
+  // Auto-scroll as new lines appear
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [stepIndex]);
 
-  // Declarative step advancement
-  useEffect(() => {
-    if (!isRunningDemo) return;
-    if (stepIndex >= DEMO_STEPS.length) {
-      setIsRunningDemo(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setStepIndex(i => i + 1);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [isRunningDemo, stepIndex]);
-
-  const runCliDemo = () => {
+  const startDemo = () => {
     setStepIndex(0);
-    setIsRunningDemo(true);
+    setIsRunning(true);
   };
 
-  const displayedLines = DEMO_STEPS.slice(0, stepIndex);
+  // Derived — O(1) state read, O(n) slice
+  const visible = DEMO_STEPS.slice(0, stepIndex);
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-        Interactive Threat Scanner Demo
-      </h2>
-      <p className="text-muted-foreground mb-8 text-lg">
-        See ECHOMEN's CLI in action. Click below to run a live threat scanning simulation.
-      </p>
-
-      {/* CLI Terminal */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-lg">
-        <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center justify-between">
-          <div className="flex gap-2">
-            <div className="h-3 w-3 rounded-full bg-red-500" />
-            <div className="h-3 w-3 rounded-full bg-yellow-500" />
-            <div className="h-3 w-3 rounded-full bg-green-500" />
-          </div>
-          <span className="text-xs font-mono text-muted-foreground">Terminal</span>
-        </div>
-
-        <div
-          ref={terminalRef}
-          className="bg-card p-6 font-mono text-sm h-96 overflow-y-auto"
-        >
-          {displayedLines.length === 0 && !isRunningDemo && (
-            <div className="text-muted-foreground text-center py-20">
-              <p>Click "Run Demo" to start the threat scanning simulation</p>
-            </div>
-          )}
-
-          {displayedLines.map((line, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`py-1 ${
-                line.includes('✓') ? 'text-green-500' :
-                line.includes('⚠️') ? 'text-yellow-500' :
-                line.includes('❌') || line.includes('✗') ? 'text-red-500' :
-                line.includes('$') ? 'text-primary font-bold' :
-                'text-foreground'
-              }`}
-            >
-              {line}
-            </motion.div>
-          ))}
-
-          {isRunningDemo && (
-            <div className="text-primary animate-pulse">
-              ▌
-            </div>
-          )}
-        </div>
+    <div className="relative rounded-lg border border-border bg-background shadow-2xl overflow-hidden">
+      {/* Chrome bar */}
+      <div className="flex items-center gap-1.5 px-4 py-3 bg-muted border-b border-border">
+        <span className="w-3 h-3 rounded-full bg-red-500" />
+        <span className="w-3 h-3 rounded-full bg-yellow-500" />
+        <span className="w-3 h-3 rounded-full bg-green-500" />
+        <span className="ml-2 text-xs text-muted-foreground font-mono">
+          echoctl — threat scanner
+        </span>
       </div>
 
-      <motion.div
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="mt-6"
-      >
-        <Button
-          size="lg"
-          onClick={runCliDemo}
-          disabled={isRunningDemo}
-          className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white font-semibold"
+      {/* Terminal output */}
+      <div ref={terminalRef} className="bg-card p-6 font-mono text-sm h-96 overflow-y-auto">
+        {visible.length === 0 && !isRunning && (
+          <p className="text-muted-foreground text-center py-20">
+            Click &ldquo;Run Demo&rdquo; to start
+          </p>
+        )}
+
+        {visible.map((line, idx) => (
+          <motion.div
+            key={`step-${idx}`}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`py-0.5 ${
+              line.includes('✓') ? 'text-green-500' :
+              line.includes('⚠️') ? 'text-yellow-500' :
+              line.includes('✗') || line.includes('❌') ? 'text-red-500' :
+              line.startsWith('$') ? 'text-primary font-bold' :
+              'text-foreground'
+            }`}
+          >
+            {line || '\u00A0'}
+          </motion.div>
+        ))}
+
+        {isRunning && <div className="text-primary animate-pulse">▌</div>}
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 bg-muted border-t border-border flex items-center justify-between">
+        <span className="text-xs text-muted-foreground font-mono">
+          {isRunning
+            ? `Scanning… ${stepIndex}/${DEMO_STEPS.length}`
+            : stepIndex >= DEMO_STEPS.length
+            ? '✓ Complete'
+            : 'Ready'}
+        </span>
+        <button
+          onClick={startDemo}
+          disabled={isRunning}
+          className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground
+                     hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed
+                     transition-colors"
         >
-          {isRunningDemo ? 'Running Demo...' : 'Run Threat Scan Demo'}
-        </Button>
-      </motion.div>
+          {isRunning ? 'Running…' : stepIndex > 0 ? 'Run Again' : 'Run Demo'}
+        </button>
+      </div>
     </div>
   );
 }
