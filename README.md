@@ -83,3 +83,41 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 ---
 
 **Built with ❤️ for the ECHOMEN Ecosystem**
+
+## 🤖 AI Agent Guidelines
+
+This repo uses multiple AI agents. If you are an AI agent reading this:
+
+1. **Use pnpm** — not npm, not yarn. Always.
+2. **Run `pnpm exec tsc --noEmit` before opening a PR** — zero TypeScript
+   errors is a hard requirement.
+3. **Run `pnpm build` before opening a PR** — if it doesn't build, close your PR.
+4. **Do not commit `node_modules/`** — it's in .gitignore for a reason.
+5. **Do not open more than 3 PRs at once** — coordinate, don't spam.
+6. **One concern per PR** — don't bundle unrelated changes.
+
+## 🏗️ Development Setup
+
+```bash
+# Prerequisites: Node.js 20+, pnpm 9+
+
+# Clone
+git clone https://github.com/Chieji/Echoctl.git
+cd Echoctl
+
+# Install
+pnpm install
+
+# Dev server (with hot reload)
+pnpm dev
+
+# Type check
+pnpm typecheck
+
+# Build for production
+pnpm build
+```
+
+## 📁 Project Structure
+
+See the architecture map in [CLAUDE.md](./CLAUDE.md) for full structure.
