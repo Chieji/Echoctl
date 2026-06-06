@@ -1,0 +1,300 @@
+# Instincts generated from https://github.com/Chieji/Echoctl
+# Generated: 2026-06-06T11:37:08.468Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: Echoctl-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Commit Length
+
+## Action
+
+Write moderate-length commit messages (~53 characters)
+
+## Evidence
+
+- Average commit message length: 53 chars
+- Based on 2 commits
+
+---
+id: Echoctl-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Naming Files
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: PascalCase
+
+---
+id: Echoctl-import-alias
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Import Alias
+
+## Action
+
+Use path aliases (@/, ~/) instead of relative imports
+
+## Evidence
+
+- Import analysis shows alias pattern
+- Example: import { x } from '@/lib/x'
+
+---
+id: Echoctl-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: Echoctl-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: 
+
+---
+id: Echoctl-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Chieji/Echoctl
+---
+
+# Echoctl Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: echoctl-instinct-filename-pascalcase
+trigger: "When creating a new file in the codebase"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Filename Pascalcase
+
+## Action
+
+Name the file using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.files: PascalCase
+
+---
+id: echoctl-instinct-function-camelcase
+trigger: "When defining a function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Function Camelcase
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: echoctl-instinct-class-pascalcase
+trigger: "When defining a class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Class Pascalcase
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: echoctl-instinct-constant-screaming-snake-case
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Constant Screaming Snake Case
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: echoctl-instinct-import-alias
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Import Alias
+
+## Action
+
+Use import aliases
+
+## Evidence
+
+- Pattern in importStyle: alias
+
+---
+id: echoctl-instinct-export-mixed
+trigger: "When exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Export Mixed
+
+## Action
+
+Use both named and default exports as appropriate
+
+## Evidence
+
+- Pattern in exportStyle: mixed
+
+---
+id: echoctl-instinct-test-location-separate
+trigger: "When adding or updating tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Test Location Separate
+
+## Action
+
+Place test files in a separate directory from source files
+
+## Evidence
+
+- Pattern in testLocation: separate
+
+---
+id: echoctl-instinct-module-type-organization
+trigger: "When organizing modules or creating new ones"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Module Type Organization
+
+## Action
+
+Group modules by type
+
+## Evidence
+
+- Pattern in moduleOrganization: type-based
+
+---
+id: echoctl-instinct-commit-freeform
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Chieji/Echoctl
+---
+
+# Echoctl Instinct Commit Freeform
+
+## Action
+
+Use a freeform commit message, optionally with an emoji or prefix, and keep it concise (around 50 characters)
+
+## Evidence
+
+- Pattern in commits.type: freeform
+- Example: ⚡ Bolt: isolate CLI demo state to prevent unnecessary Home re-renders
+- Example: Acknowledge PR closure as superseded
+- Pattern in averageLength: 53
+
