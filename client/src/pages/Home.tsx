@@ -1,125 +1,57 @@
-import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Menu, X, Moon, Sun, Copy, Check, Github, Zap, Shield, Workflow, Code2, Terminal, ChevronRight } from 'lucide-react';
+import { Github, Zap, Shield, Workflow, Code2, Terminal, ChevronRight } from 'lucide-react';
 import { CliDemo } from '@/components/CliDemo';
+import { Header } from '@/components/Header';
+
+// Hoist static variants to module level to prevent recreation on every render
+const CONTAINER_VARIANTS = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const ITEM_VARIANTS = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5 },
+  },
+};
+
+const FEATURES = [
+  { icon: <Terminal className="h-8 w-8" />, title: 'Fast CLI', description: 'Lightning-quick command-line interface for power users and automation workflows.' },
+  { icon: <Shield className="h-8 w-8" />, title: 'Threat Detection', description: 'Real-time vulnerability scanning and security analysis across your infrastructure.' },
+  { icon: <Workflow className="h-8 w-8" />, title: 'Workflow Automation', description: 'Orchestrate complex tasks and manage MCP servers with intuitive automation.' },
+  { icon: <Code2 className="h-8 w-8" />, title: 'Developer Friendly', description: 'Comprehensive API and SDK for seamless integration into your projects.' },
+  { icon: <Zap className="h-8 w-8" />, title: 'High Performance', description: 'Optimized for speed with minimal resource consumption and instant feedback.' },
+  { icon: <ChevronRight className="h-8 w-8" />, title: 'Extensible', description: 'Build custom plugins and extensions to tailor ECHOMEN to your needs.' },
+];
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-
-  const copyToClipboard = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
-  };
-
   const currentYear = new Date().getFullYear();
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md transition-all duration-300">
-        <div className="container flex items-center justify-between py-4">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">ECHOMEN</span>
-          </motion.div>
-          <nav className="hidden gap-8 md:flex" aria-label="Main navigation">
-            {['Features', 'Demo', 'FAQ', 'Community'].map((item) => (
-              <motion.a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                whileHover={{ color: '#3b82f6' }}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-              >
-                {item}
-              </motion.a>
-            ))}
-          </nav>
-          <div className="flex items-center gap-4">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
-              className="rounded-lg p-2 hover:bg-muted transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </motion.button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden rounded-lg p-2 hover:bg-muted transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="border-t border-border bg-background px-4 py-4 md:hidden"
-          >
-            <nav className="flex flex-col gap-4" aria-label="Mobile navigation">
-              {['Features', 'Demo', 'FAQ', 'Community'].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {item}
-                </a>
-              ))}
-            </nav>
-          </motion.div>
-        )}
-      </header>
+      <Header />
 
       <section className="relative overflow-hidden py-20 md:py-32" role="region" aria-label="Hero">
-        <div className="absolute inset-0 -z-10 opacity-30" style={{backgroundImage: 'url(https://d2xsxph8kpxj0f.cloudfront.net/310519663568704090/Fz7rAXkQCqMwwVoPUWcS4j/echomen_hero_premium-FbzwPmrNYC8U8XbZVfsMzS.webp)', backgroundSize: 'cover', backgroundPosition: 'center'}} />
+        <div className="absolute inset-0 -z-10 opacity-30" style={{ backgroundImage: 'url(https://d2xsxph8kpxj0f.cloudfront.net/310519663568704090/Fz7rAXkQCqMwwVoPUWcS4j/echomen_hero_premium-FbzwPmrNYC8U8XbZVfsMzS.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div className="container">
-          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="max-w-3xl">
-            <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-bold leading-tight text-foreground mb-6">
+          <motion.div variants={CONTAINER_VARIANTS} initial="hidden" animate="visible" className="max-w-3xl">
+            <motion.h1 variants={ITEM_VARIANTS} className="text-4xl md:text-6xl font-bold leading-tight text-foreground mb-6">
               The Autonomous Agent Ecosystem Built for <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Action</span>
             </motion.h1>
-            <motion.p variants={itemVariants} className="text-lg text-muted-foreground mb-8 max-w-2xl">
+            <motion.p variants={ITEM_VARIANTS} className="text-lg text-muted-foreground mb-8 max-w-2xl">
               Seamlessly switch between a high-speed CLI and a powerful Web UI. Execute tasks, manage MCP servers, and automate your workflow with ECHOMEN.
             </motion.p>
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4">
+            <motion.div variants={ITEM_VARIANTS} className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold" aria-label="Get Started" onClick={() => document.getElementById('installation')?.scrollIntoView({ behavior: 'smooth' })}>
                 <Terminal className="mr-2 h-5 w-5" /> Get Started
               </Button>
@@ -146,14 +78,7 @@ export default function Home() {
             <p className="text-muted-foreground text-lg max-w-2xl">Everything you need to manage autonomous agents and secure your infrastructure.</p>
           </motion.div>
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {icon: <Terminal className="h-8 w-8" />, title: 'Fast CLI', description: 'Lightning-quick command-line interface for power users and automation workflows.'},
-              {icon: <Shield className="h-8 w-8" />, title: 'Threat Detection', description: 'Real-time vulnerability scanning and security analysis across your infrastructure.'},
-              {icon: <Workflow className="h-8 w-8" />, title: 'Workflow Automation', description: 'Orchestrate complex tasks and manage MCP servers with intuitive automation.'},
-              {icon: <Code2 className="h-8 w-8" />, title: 'Developer Friendly', description: 'Comprehensive API and SDK for seamless integration into your projects.'},
-              {icon: <Zap className="h-8 w-8" />, title: 'High Performance', description: 'Optimized for speed with minimal resource consumption and instant feedback.'},
-              {icon: <ChevronRight className="h-8 w-8" />, title: 'Extensible', description: 'Build custom plugins and extensions to tailor ECHOMEN to your needs.'},
-            ].map((feature, idx) => (
+            {FEATURES.map((feature, idx) => (
               <motion.div key={idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1, duration: 0.5 }} whileHover={{ y: -5 }} className="p-6 rounded-xl border border-border bg-card hover:shadow-lg transition-all duration-300">
                 <div className="text-primary mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-bold mb-2 text-foreground">{feature.title}</h3>
@@ -184,7 +109,17 @@ export default function Home() {
 
       <footer className="border-t border-border bg-muted/50 py-12">
         <div className="container">
-          ...footer content...
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
+            <div className="flex items-center gap-2">
+              <Zap className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold">ECHOMEN</span>
+            </div>
+            <nav className="flex gap-8 text-sm font-medium text-muted-foreground">
+              <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+              <a href="#" className="hover:text-primary transition-colors">Terms</a>
+              <a href="#" className="hover:text-primary transition-colors">Contact</a>
+            </nav>
+          </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
             <p>&copy; {currentYear} ECHOMEN. All rights reserved.</p>
           </div>
