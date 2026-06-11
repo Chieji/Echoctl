@@ -57,6 +57,7 @@ const DEMO_STEPS = [
 ];
 
 export function CliDemo() {
+
   const [stepIndex, setStepIndex] = useState(0);
   const [isRunningDemo, setIsRunningDemo] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
