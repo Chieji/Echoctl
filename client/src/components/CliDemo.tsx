@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
@@ -56,7 +56,7 @@ const DEMO_STEPS = [
   '✓ Scan completed successfully',
 ];
 
-export function CliDemo() {
+const CliDemo = memo(() => {
   const [stepIndex, setStepIndex] = useState(0);
   const [isRunningDemo, setIsRunningDemo] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -160,4 +160,8 @@ export function CliDemo() {
       </motion.div>
     </div>
   );
-}
+});
+
+CliDemo.displayName = 'CliDemo';
+
+export { CliDemo };
