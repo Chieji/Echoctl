@@ -10,7 +10,7 @@ ECHOMEN is a dual-core ecosystem that seamlessly switches between a high-speed C
 
 ## 🚀 Quick Links
 
-- **Live Site:** https://echomenweb-fz7raxkq.manus.space
+
 - **GitHub (Website):** https://github.com/Chieji/echomen-website
 - **GitHub (ECHOMEN):** https://github.com/Chieji/ECHOMEN
 - **GitHub (Echoctl):** https://github.com/Chieji/echoctl
