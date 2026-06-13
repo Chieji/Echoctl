@@ -1,0 +1,25 @@
+# EchoCTL Provider Configuration
+# This file is a template. The actual config lives at ~/.echoctl/config.yaml
+
+provider: groq
+model: llama-3.3-70b-versatile
+
+providers:
+  openai:
+    enabled: true
+  anthropic:
+    enabled: true
+  groq:
+    enabled: true
+  openrouter:
+    enabled: true
+  gemini:
+    enabled: true
+  mistral:
+    enabled: true
+  deepseek:
+    enabled: true
+  fireworks:
+    enabled: true
+  together:
+    enabled: true

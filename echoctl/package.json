@@ -1,0 +1,36 @@
+{
+  "name": "echoctl",
+  "version": "0.1.0",
+  "description": "EchoCTL — Multi-Provider AI CLI with OpenCode-compatible provider & auth system",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "echoctl": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "llm",
+    "openai",
+    "anthropic",
+    "groq",
+    "multi-provider"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

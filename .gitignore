@@ -115,3 +115,7 @@ client/public/__manus__/version.json
 .manus-logs/
 
 dist/
+
+# EchoCTL CLI module
+echoctl/dist/
+echoctl/node_modules/
