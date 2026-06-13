@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import * as Sentry from "@sentry/react";
 
 interface Props {
   children: ReactNode;
@@ -9,16 +10,24 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  eventId: string | null;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, eventId: null };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    const eventId = Sentry.captureException(error, {
+      extra: { componentStack: info.componentStack },
+    });
+    this.setState({ eventId });
   }
 
   render() {
@@ -33,11 +42,22 @@ class ErrorBoundary extends Component<Props, State> {
 
             <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
 
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
+            {import.meta.env.DEV ? (
+              <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
+                <pre className="text-sm text-muted-foreground whitespace-break-spaces">
+                  {this.state.error?.stack}
+                </pre>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-6">
+                Something went wrong. Please try reloading the page.
+                {this.state.eventId && (
+                  <span className="block mt-2 text-xs">
+                    Error ID: {this.state.eventId}
+                  </span>
+                )}
+              </p>
+            )}
 
             <button
               onClick={() => window.location.reload()}

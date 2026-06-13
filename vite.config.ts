@@ -154,6 +154,8 @@ function vitePluginStorageProxy(): Plugin {
   return {
     name: "manus-storage-proxy",
     configureServer(server: ViteDevServer) {
+      // Storage proxy is dev-only — skip in production
+      if (process.env.NODE_ENV === "production") return;
       server.middlewares.use("/manus-storage", async (req, res) => {
         const key = req.url?.replace(/^\//, "");
         if (!key) {
@@ -206,7 +208,7 @@ function vitePluginStorageProxy(): Plugin {
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '/echomen-website/' : '/',
+  base: process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/echomen-website/' : '/'),
   plugins,
   resolve: {
     alias: {

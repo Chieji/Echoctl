@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request, type Response, type NextFunction } from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,24 +13,32 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  app.use(helmet());
-  app.use(compression());
-
+  // Sentry v9 initialization — auto-instruments via OpenTelemetry.
+  // No requestHandler/errorHandler middleware needed in v9.
   Sentry.init({
     dsn: process.env.SENTRY_DSN || "",
     environment: process.env.NODE_ENV || "development",
     tracesSampleRate: 0.2,
   });
-  app.use(Sentry.Handlers.requestHandler());
+
+  app.use(helmet());
+  app.use(compression());
 
   const staticPath = path.resolve(__dirname, "..", "dist", "public");
   app.use(express.static(staticPath));
 
-  app.get("*", (_req, res) => {
+  app.get("*", (_req: Request, res: Response) => {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 
-  app.use(Sentry.Handlers.errorHandler());
+  // Express error-handling middleware (4-arg signature) — captures errors to Sentry
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    Sentry.captureException(err);
+    if (process.env.NODE_ENV === "development") {
+      console.error(err);
+    }
+    res.status(500).send("Internal Server Error");
+  });
 
   const port = process.env.PORT || 3000;
   server.listen(port, () => {
@@ -38,4 +46,8 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((err) => {
+  Sentry.captureException(err);
+  console.error("Failed to start server:", err.message);
+  process.exit(1);
+});
